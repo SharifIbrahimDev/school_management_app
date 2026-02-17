@@ -157,22 +157,25 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
         ],
       ),
       floatingActionButton: _selectedSectionId != null && isPrincipal
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddSessionScreen(
-                      selectedSectionId: _selectedSectionId!,
-                      onSuccess: _loadSessions,
-                      schoolId: _currentUser?.schoolId ?? '',
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddSessionScreen(
+                        selectedSectionId: _selectedSectionId!,
+                        onSuccess: _loadSessions,
+                        schoolId: _currentUser?.schoolId ?? '',
+                      ),
                     ),
-                  ),
-                );
-              },
-              backgroundColor: AppTheme.primaryColor,
-              tooltip: 'Add Session',
-              child: const Icon(Icons.add, color: Colors.white),
+                  );
+                },
+                backgroundColor: AppTheme.primaryColor,
+                tooltip: 'Add Session',
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
             )
           : null,
       body: Container(

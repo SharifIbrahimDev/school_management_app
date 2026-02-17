@@ -120,18 +120,21 @@ class _SectionListScreenState extends State<SectionListScreen> {
         ],
       ),
       floatingActionButton: isProprietor
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddSectionScreen(),
-                  ),
-                ).then((_) => _loadSections());
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Section'),
-              backgroundColor: AppTheme.primaryColor,
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddSectionScreen(),
+                    ),
+                  ).then((_) => _loadSections());
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Section'),
+                backgroundColor: AppTheme.primaryColor,
+              ),
             )
           : null,
       body: Container(

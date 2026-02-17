@@ -108,16 +108,19 @@ class _UsersListScreenState extends State<UsersListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primaryColor,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddUserScreen()),
-          ).then((_) => _loadUsers());
-        },
-        tooltip: 'Add User',
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton(
+          backgroundColor: AppTheme.primaryColor,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddUserScreen()),
+            ).then((_) => _loadUsers());
+          },
+          tooltip: 'Add User',
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
       body: Container(
         decoration: BoxDecoration(

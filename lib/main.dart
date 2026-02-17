@@ -14,6 +14,7 @@ import 'core/services/report_service_api.dart';
 import 'core/services/user_service_api.dart';
 import 'core/services/subject_service_api.dart';
 import 'core/utils/app_theme.dart';
+import 'core/providers/settings_provider.dart';
 import 'core/utils/preferences_manager.dart';
 import 'screens/auth/auth_wrapper.dart';
 import 'screens/auth/login_screen.dart';
@@ -44,17 +45,26 @@ class SchoolApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReportServiceApi()),
         ChangeNotifierProvider(create: (_) => UserServiceApi()),
         ChangeNotifierProvider(create: (_) => SubjectServiceApi()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
-      child: MaterialApp(
-        title: 'School Management App',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: const SplashScreen(),
-        routes: {
-          '/auth': (context) => const AuthWrapper(),
-          '/login': (context) => const LoginScreen(),
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            title: 'School Management App',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode == 'light' 
+                ? ThemeMode.light 
+                : settings.themeMode == 'dark' 
+                    ? ThemeMode.dark 
+                    : ThemeMode.system,
+            home: const SplashScreen(),
+            routes: {
+              '/auth': (context) => const AuthWrapper(),
+              '/login': (context) => const LoginScreen(),
+            },
+          );
         },
       ),
     );
