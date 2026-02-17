@@ -1,0 +1,218 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/models/user_model.dart';
+import '../../core/services/auth_service_api.dart';
+import '../../core/services/user_service_api.dart';
+import '../../core/utils/app_theme.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/custom_app_bar.dart';
+
+class AddUserScreen extends StatefulWidget {
+  const AddUserScreen({super.key});
+
+  @override
+  State<AddUserScreen> createState() => _AddUserScreenState();
+}
+
+class _AddUserScreenState extends State<AddUserScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  UserRole _selectedRole = UserRole.principal;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addUser() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final authService = Provider.of<AuthServiceApi>(context, listen: false);
+    final userService = Provider.of<UserServiceApi>(context, listen: false);
+    
+    final currentUserMap = authService.currentUser;
+    if (currentUserMap == null) {
+      AppSnackbar.showError(context, message: 'User not logged in');
+      return;
+    }
+    
+    final currentUser = UserModel.fromMap(currentUserMap);
+    if (currentUser.role != UserRole.proprietor) {
+      AppSnackbar.showError(context, message: 'Access denied');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await userService.createUser(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        role: _selectedRole.toString().split('.').last,
+      );
+
+      if (mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          message: 'User successfully created as ${_selectedRole.toString().split('.').last.toUpperCase()}',
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.showError(context, message: 'Error creating user: $e');
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: const CustomAppBar(
+        title: 'Add User',
+      ),
+      body: Container(
+        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/auth_bg_pattern.png'),
+            fit: BoxFit.cover,
+            opacity: 0.05,
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primaryColor.withValues(alpha: 0.1),
+              AppTheme.accentColor.withValues(alpha: 0.2),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.4, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: AppTheme.glassDecoration(
+                      context: context,
+                      opacity: 0.6,
+                      hasGlow: true,
+                      borderRadius: 20,
+                      borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                    ),
+                    child: Column(
+                      children: [
+                        CustomTextField(
+                          controller: _fullNameController,
+                          labelText: 'Full Name',
+                          prefixIcon: Icons.person,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _emailController,
+                          labelText: 'Email Address',
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: Icons.email,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _passwordController,
+                          labelText: 'Password',
+                          prefixIcon: Icons.lock,
+                          obscureText: true,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _phoneController,
+                          labelText: 'Phone Number',
+                          keyboardType: TextInputType.phone,
+                          prefixIcon: Icons.phone,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _addressController,
+                          labelText: 'Address',
+                          prefixIcon: Icons.location_on,
+                          maxLines: 2,
+                          isRequired: true,
+                        ),
+                        const SizedBox(height: 16),
+                         DropdownButtonFormField<UserRole>(
+                          initialValue: _selectedRole,
+                          dropdownColor: theme.colorScheme.surface,
+                          decoration: InputDecoration(
+                            labelText: 'Role',
+                            prefixIcon: const Icon(Icons.work, color: AppTheme.primaryColor),
+                            filled: true,
+                            fillColor: AppTheme.primaryColor.withValues(alpha: 0.05),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                            ),
+                          ),
+                          items: UserRole.values
+                              .where((role) => role != UserRole.proprietor)
+                              .map((role) => DropdownMenuItem(
+                                    value: role,
+                                    child: Text(
+                                      role.toString().split('.').last.toUpperCase(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (value) => setState(() => _selectedRole = value!),
+                          validator: (value) => value == null ? 'Please select a role' : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  CustomButton(
+                    text: 'Add User',
+                    onPressed: _addUser,
+                    isLoading: _isLoading,
+                    icon: Icons.person_add,
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

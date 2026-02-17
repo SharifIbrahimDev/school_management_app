@@ -1,0 +1,19 @@
+# Firebase credentials (NEVER commit!)
+firebase-service-account.json
+*.json
+
+# Exported data
+firestore-export/
+*.csv
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
