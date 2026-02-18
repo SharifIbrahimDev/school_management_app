@@ -13,6 +13,7 @@ import 'forgot_password_screen.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/error_handler.dart';
+import '../../core/utils/validators.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -255,15 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     labelText: 'Email',
                                     keyboardType: TextInputType.emailAddress,
                                     prefixIcon: Icons.email_outlined,
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please enter your email';
-                                      }
-                                      if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(value)) {
-                                        return 'Invalid email format';
-                                      }
-                                      return null;
-                                    },
+                                    validator: (value) => Validators.validateEmail(value),
                                   ),
                                   const SizedBox(height: 20),
                                   CustomTextField(
@@ -275,15 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                                     ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please enter your password';
-                                      }
-                                      if (value.length < 6) {
-                                        return 'Password must be at least 6 characters';
-                                      }
-                                      return null;
-                                    },
+                                    validator: (value) => Validators.validatePassword(value),
                                   ),
                                   const SizedBox(height: 12),
                                   Row(

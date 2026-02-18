@@ -7,6 +7,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/error_handler.dart';
+import '../../core/utils/validators.dart';
 import 'auth_wrapper.dart';
 
 class SignupScreen extends StatefulWidget {

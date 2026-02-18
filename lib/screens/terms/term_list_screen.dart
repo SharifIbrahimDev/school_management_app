@@ -9,6 +9,12 @@ import '../../core/services/term_service_api.dart';
 import 'edit_term_screen.dart';
 import 'term_detail_screen.dart';
 import '../../core/utils/app_theme.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../core/utils/error_handler.dart';
 
 class TermListView extends StatelessWidget {
   final TermServiceApi termService;
@@ -31,22 +37,13 @@ class TermListView extends StatelessWidget {
   });
 
   Future<void> _deleteTerm(BuildContext context, TermModel term) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Term'),
-        content: Text('Are you sure you want to delete "${term.termName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Term',
+      content: 'Are you sure you want to delete "${term.termName}"? This will affect all class data linked to this term.',
+      confirmText: 'Delete Term',
+      confirmColor: Colors.red,
+      icon: Icons.event_busy_rounded,
     );
     if (confirmed == true) {
       try {
@@ -54,16 +51,12 @@ class TermListView extends StatelessWidget {
           int.parse(term.id),
         );
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Term deleted successfully')),
-          );
+          AppSnackbar.showSuccess(context, message: 'Term deleted successfully');
           onRefresh();
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting term: $e')),
-          );
+          AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
@@ -94,27 +87,26 @@ class TermListView extends StatelessWidget {
           ),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              print('FutureBuilder error: ${snapshot.error}');
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Error: ${snapshot.error}'),
-                    ElevatedButton(
-                      onPressed: onRefresh,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              return ErrorDisplayWidget(
+                error: snapshot.error.toString(),
+                onRetry: onRefresh,
               );
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: LoadingIndicator(message: 'Fetching terms...'));
             }
             final termsData = snapshot.data ?? [];
             final terms = termsData.map((data) => TermModel.fromMap(data)).toList();
             if (terms.isEmpty) {
-              return const Center(child: Text('No terms added yet'));
+              return EmptyStateWidget(
+                icon: Icons.event_note_rounded,
+                title: 'No Terms Found',
+                message: 'No terms have been added to this session yet.',
+                actionButtonText: isPrincipal ? 'Add Term' : 'Refresh',
+                onActionPressed: isPrincipal 
+                    ? () { /* This would need navigation to AddTermScreen if it was easily accessible here */ } 
+                    : onRefresh,
+              );
             }
             return ListView.builder(
               shrinkWrap: true,

@@ -8,6 +8,11 @@ import 'add_user_screen.dart';
 import 'user_details_screen.dart';
 import 'student_parent_linking_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/utils/error_handler.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../widgets/app_snackbar.dart';
 
 class UsersListScreen extends StatefulWidget {
   const UsersListScreen({super.key});
@@ -195,20 +200,11 @@ class _UsersListScreenState extends State<UsersListScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: LoadingIndicator(message: 'Loading users...'))
                   : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _loadUsers,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
+                      ? ErrorDisplayWidget(
+                          error: _errorMessage!,
+                          onRetry: _loadUsers,
                         )
                       : _buildUsersList(),
             ),
@@ -229,7 +225,24 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }).toList();
 
     if (filteredUsers.isEmpty) {
-      return const Center(child: Text('No users found'));
+      return EmptyStateWidget(
+        icon: Icons.people_outline_rounded,
+        title: 'No Users Found',
+        message: _searchQuery.isNotEmpty 
+            ? 'We couldn\'t find any users matching "$_searchQuery"'
+            : 'Start by adding your first school staff or parent account',
+        actionButtonText: _searchQuery.isNotEmpty ? 'Clear Search' : 'Add User',
+        onActionPressed: () {
+          if (_searchQuery.isNotEmpty) {
+            _searchController.clear();
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddUserScreen()),
+            ).then((_) => _loadUsers());
+          }
+        },
+      );
     }
 
     return ListView.builder(

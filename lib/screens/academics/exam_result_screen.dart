@@ -6,6 +6,11 @@ import '../../core/services/student_service_api.dart'; // To get students list
 import '../../core/services/notification_service_api.dart';
 import 'bulk_result_upload_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../core/utils/error_handler.dart';
 
 class ExamResultScreen extends StatefulWidget {
   final int examId;
@@ -74,7 +79,7 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -94,7 +99,7 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
       }).toList();
 
       if (payload.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No scores to save')));
+        AppSnackbar.showWarning(context, message: 'No scores to save');
         setState(() => _isLoading = false);
         return;
       }
@@ -106,23 +111,17 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
           _isLoading = false;
           _isDirty = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Results saved successfully'),
-            action: SnackBarAction(
-              label: 'NOTIFY PARENTS',
-              textColor: Colors.amber,
-              onPressed: () {
-                _showNotifyDialog();
-              },
-            ),
-          ),
+        AppSnackbar.showSuccess(
+          context, 
+          message: 'Results saved successfully',
+          actionLabel: 'NOTIFY',
+          onActionPressed: _showNotifyDialog,
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -185,8 +184,16 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.separated(
+              ? const Center(child: LoadingIndicator(message: 'Loading candidate records...'))
+              : _students.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.people_outline,
+                      title: 'No Students Found',
+                      message: 'No students are assigned to this class or section.',
+                      actionButtonText: 'Refresh',
+                      onActionPressed: _loadData,
+                    )
+                  : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: _students.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -291,24 +298,19 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
     );
   }
 
-  void _showNotifyDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Notify Parents/Students?'),
-        content: Text('Send a notification to ${_students.length} students about these results?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _sendNotifications();
-            },
-            child: const Text('Send', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  void _showNotifyDialog() async {
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Notify Parents/Students?',
+      content: 'Send a push notification to ${_students.length} students about these results? This will also notify their parents.',
+      confirmText: 'Send Notifications',
+      confirmColor: AppTheme.primaryColor,
+      icon: Icons.notifications_active_rounded,
     );
+
+    if (confirmed == true) {
+      _sendNotifications();
+    }
   }
 
   Future<void> _sendNotifications() async {
@@ -318,7 +320,7 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
         .toList();
 
     if (userIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No linked users found to notify')));
+      AppSnackbar.showWarning(context, message: 'No linked users found to notify');
       return;
     }
 
@@ -332,11 +334,11 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
         data: {'exam_id': widget.examId, 'type': 'result'},
       );
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications sent successfully')));
+         AppSnackbar.showSuccess(context, message: 'Notifications sent successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error sending notifications: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

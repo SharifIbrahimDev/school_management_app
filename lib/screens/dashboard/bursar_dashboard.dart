@@ -14,6 +14,9 @@ import '../../core/services/class_service_api.dart';
 import '../../core/services/transaction_service_api.dart';
 import 'dashboard_content.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class BursarDashboard extends StatefulWidget {
   final String schoolId;
@@ -215,7 +218,7 @@ class _BursarDashboardState extends State<BursarDashboard> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: LoadingIndicator(message: 'Loading financial dashboard...')),
       );
     }
 
@@ -315,27 +318,10 @@ class _BursarDashboardState extends State<BursarDashboard> {
   Widget _buildErrorScreen(String error, VoidCallback onRetry) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  error,
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: onRetry,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+        child: ErrorDisplayWidget(
+          error: error,
+          onRetry: onRetry,
+          showContactSupport: true,
         ),
       ),
     );
@@ -344,34 +330,12 @@ class _BursarDashboardState extends State<BursarDashboard> {
   Widget _buildNoSectionsScreen() {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'No sections assigned',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please contact the school administrator',
-                style: TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _refreshDashboard,
-                child: const Text('Refresh'),
-              ),
-            ],
-          ),
+        child: EmptyStateWidget(
+          icon: Icons.account_balance_rounded,
+          title: 'No Sections Assigned',
+          message: 'It looks like you haven\'t been assigned to any sections yet. Please contact your proprietor to get started.',
+          actionButtonText: 'Refresh Dashboard',
+          onActionPressed: _refreshDashboard,
         ),
       ),
     );

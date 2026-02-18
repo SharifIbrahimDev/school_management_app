@@ -8,6 +8,8 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_button.dart';
 import 'edit_user_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../core/utils/error_handler.dart';
 
 class UserDetailsScreen extends StatefulWidget {
   final UserModel user;
@@ -20,22 +22,13 @@ class UserDetailsScreen extends StatefulWidget {
 
 class _UserDetailsScreenState extends State<UserDetailsScreen> {
   Future<void> _deleteUser(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${widget.user.fullName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete User Account',
+      content: 'Are you sure you want to delete ${widget.user.fullName}? This will permanently remove their access to the system and all associated data.',
+      confirmText: 'Delete Account',
+      confirmColor: Colors.red,
+      icon: Icons.person_remove_rounded,
     );
 
     if (confirmed != true) return;
@@ -50,7 +43,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) {
-        AppSnackbar.showError(context, message: 'Error deleting user: $e');
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

@@ -45,7 +45,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Protected routes (authentication required)
-Route::middleware('auth:api')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
 
     // Auth routes
     Route::prefix('auth')->group(function () {
@@ -163,6 +163,11 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('import')->group(function () {
         Route::post('/users', [ImportController::class, 'importUsers']);
         Route::post('/students', [ImportController::class, 'importStudents']);
+        Route::post('/sections', [ImportController::class, 'importSections']);
+        Route::post('/classes', [ImportController::class, 'importClasses']);
+        Route::post('/fees', [ImportController::class, 'importFees']);
+        Route::post('/map-parents', [ImportController::class, 'mapParents']);
+        Route::post('/assign-teachers', [ImportController::class, 'assignTeachers']);
     });
     
     Route::apiResource('timetables', TimetableController::class);

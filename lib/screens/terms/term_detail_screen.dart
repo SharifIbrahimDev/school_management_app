@@ -8,6 +8,9 @@ import '../../core/services/auth_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import 'edit_term_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../core/utils/error_handler.dart';
 
 class TermDetailScreen extends StatefulWidget {
   final TermModel term;
@@ -106,7 +109,7 @@ class _TermDetailScreenState extends State<TermDetailScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: LoadingIndicator(message: 'Loading term details...'))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -176,14 +179,9 @@ class _TermDetailScreenState extends State<TermDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (_errorMessage != null)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: AppTheme.glassDecoration(
-                            context: context,
-                            opacity: 0.1,
-                            borderColor: Colors.red.withValues(alpha: 0.3),
-                          ),
-                          child: Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 14)),
+                        ErrorDisplayWidget(
+                          error: _errorMessage!,
+                          onRetry: _loadTerm,
                         ),
                       Container(
                         width: double.infinity,

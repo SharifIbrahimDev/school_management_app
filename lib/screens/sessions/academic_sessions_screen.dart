@@ -14,6 +14,10 @@ import 'edit_session_screen.dart';
 import 'session_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../core/utils/error_handler.dart';
 
 class AcademicSessionsScreen extends StatefulWidget {
   final Function(String?, String?)? onSelectionChanged;
@@ -107,22 +111,13 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
   }
 
   Future<void> _deleteSession(AcademicSessionModel session) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Session'),
-        content: Text('Are you sure you want to delete "${session.sessionName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Session',
+      content: 'Are you sure you want to delete "${session.sessionName}"? This will remove all associated term and class data for this session.',
+      confirmText: 'Delete',
+      confirmColor: Colors.red,
+      icon: Icons.delete_sweep_rounded,
     );
 
     if (confirmed == true) {
@@ -136,7 +131,7 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          AppSnackbar.showError(context, message: 'Error deleting session: $e');
+          AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
@@ -198,7 +193,7 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: LoadingIndicator(message: 'Loading academic sessions...'))
               : Column(
                   children: [
                     if (_assignedSections.isNotEmpty)
@@ -246,9 +241,9 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
                         ),
                       )
                     else if (_errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+                      ErrorDisplayWidget(
+                        error: _errorMessage!,
+                        onRetry: _loadSessions,
                       ),
     
                     Expanded(

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchoolApp - Premium Bulk Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.15);
+            --secondary: #064e3b;
+            --accent: #34d399;
+            --bg-grad: radial-gradient(circle at top right, #f0fdfa, #f8fafc);
+            --surface: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --sidebar-bg: #064e3b;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --error: #ef4444;
+            --success: #10b981;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-grad);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Sidebar Redesign --- */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            color: white;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .brand-logo {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 24px;
+            box-shadow: 0 8px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .brand-name {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to bottom, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            padding: 14px 18px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 15px;
+        }
+
+        .nav-item i {
+            font-size: 18px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #logoutBtn {
+            margin-top: auto;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        #logoutBtn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* --- Main Content --- */
+        .main-wrapper {
+            flex: 1;
+            margin-left: 280px;
+            padding: 50px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .hero-section {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .hero-text h1 {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            color: var(--secondary);
+        }
+
+        .hero-text p {
+            color: var(--text-muted);
+            font-size: 17px;
+        }
+
+        /* --- Glass Cards --- */
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 30px;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- Form Elements --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            font-family: inherit;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-glow);
+        }
+
+        /* Custom File Upload */
+        input[type="file"] {
+            padding: 10px;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            cursor: pointer;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        /* --- Alert Modules --- */
+        .info-panel {
+            background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+            border-left: 5px solid var(--primary);
+            padding: 20px 25px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            font-size: 15px;
+            color: var(--secondary);
+            line-height: 1.6;
+        }
+
+        .result-toast {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 20px;
+            display: none;
+            font-weight: 500;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                scale: 0.9;
+            }
+
+            to {
+                opacity: 1;
+                scale: 1;
+            }
+        }
+
+        .result-toast.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .result-toast.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* --- Specific Component Stylings --- */
+        .school-badge {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 100px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: var(--secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .module-body {
+            display: none;
+        }
+
+        .module-body.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .checkbox-container:hover {
+            border-color: var(--primary);
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1000px) {
+            .sidebar {
+                width: 80px;
+                padding: 30px 15px;
+            }
+
+            .brand-name,
+            .nav-text {
+                display: none;
+            }
+
+            .main-wrapper {
+                margin-left: 80px;
+                padding: 30px;
+            }
+
+            .mapping-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">S</div>
+            <div class="brand-name">SchoolApp</div>
+        </div>
+
+        <nav class="nav-group" id="navItems" style="display: none;">
+            <div class="nav-item active" data-module="users" onclick="switchModule(this)">
+                <span>👥</span> <span class="nav-text">Administrative Staff</span>
+            </div>
+            <div class="nav-item" data-module="sections" onclick="switchModule(this)">
+                <span>🏢</span> <span class="nav-text">School Sections</span>
+            </div>
+            <div class="nav-item" data-module="classes" onclick="switchModule(this)">
+                <span>🏫</span> <span class="nav-text">Academic Classes</span>
+            </div>
+            <div class="nav-item" data-module="students" onclick="switchModule(this)">
+                <span>🎓</span> <span class="nav-text">Student Records</span>
+            </div>
+            <div class="nav-item" data-module="mapping" onclick="switchModule(this)">
+                <span>🔗</span> <span class="nav-text">Entity Mapping</span>
+            </div>
+            <div class="nav-item" data-module="fees" onclick="switchModule(this)">
+                <span>💰</span> <span class="nav-text">Financial Struct</span>
+            </div>
+        </nav>
+
+        <button id="logoutBtn" style="display: none;" onclick="logout()">Logout Portal</button>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="hero-section">
+            <div class="hero-text">
+                <h1>Bulk Operations</h1>
+                <p>Advanced ecosystem for automated institutional data migration.</p>
+            </div>
+            <div id="schoolDisplay" style="display: none;">
+                <div class="school-badge">
+                    <span>🏛️</span>
+                    <select id="schoolSelect"
+                        style="border: none; padding: 0; background: transparent; font-weight: 700;">
+                        <option>Configuring...</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- PORTAL LOGIN -->
+        <section id="loginPanel" class="glass-card">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="font-size: 28px; margin-bottom: 10px;">Security Verification</h2>
+                <p style="color: var(--text-muted);">Enter administrative credentials to unlock bulk tools.</p>
+            </div>
+            <form id="loginForm" style="max-width: 450px; margin: 0 auto;">
+                <div style="margin-bottom: 20px;">
+                    <label class="field-label">System Email</label>
+                    <input type="email" id="loginEmail" required placeholder="admin@daynapp.com">
+                </div>
+                <div style="margin-bottom: 30px;">
+                    <label class="field-label">Access Token</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="action-btn">Initialize Connection</button>
+            </form>
+            <div id="loginResult" class="result-toast"></div>
+        </section>
+
+        <!-- USERS MODULE -->
+        <section id="users" class="module-body active glass-card" style="display: none;">
+            <div style="margin-bottom: 30px;">
+                <h2 style="font-size: 26px;">Import Human Resources</h2>
+                <p style="color: var(--text-muted);">Sync teachers, parents, and administrative staff members.</p>
+            </div>
+
+            <div class="info-panel">
+                <strong>Data Structure:</strong> Requires [name, email, phone (optional)].<br>
+                Security protocols will assign a temporary password ('password123') to all new accounts.
+            </div>
+
+            <form id="usersForm">
+                <div class="form-grid">
+                    <div>
+                        <label class="field-label">Deployment Role</label>
+                        <select id="userRole">
+                            <option value="principal">Principal</option>
+                            <option value="bursar">Bursar</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="parent">Parent</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Source CSV</label>
+                        <input type="file" id="usersFile" accept=".csv" required>
+                    </div>
+                </div>
+                <button type="submit" class="action-btn">⚡ Execute Migration</button>
+            </form>
+            <div id="usersResult" class="result-toast"></div>
+        </section>
+
+        <!-- SECTIONS MODULE -->
+        <section id="sections" class="module-body glass-card">
+            <h2 style="margin-bottom: 10px;">School Sections</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Architecture setup for school blocks (e.g.,
+                Primary, Junior Secondary).</p>
+            <div class="info-panel"><strong>Headers:</strong> section_name, description, is_active</div>
+            <form id="sectionsForm">
+                <div style="margin-bottom: 30px;">
+                    <label class="field-label">Select File</label>
+                    <input type="file" id="sectionsFile" accept=".csv" required>
+                </div>
+                <button type="submit" class="action-btn">Deploy Structure</button>
+            </form>
+            <div id="sectionsResult" class="result-toast"></div>
+        </section>
+
+        <!-- CLASSES MODULE -->
+        <section id="classes" class="module-body glass-card">
+            <h2 style="margin-bottom: 10px;">Academic Classes</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Generate grade levels and assign them to specific
+                sections.</p>
+            <div class="info-panel"><strong>Headers:</strong> class_name, section_id, capacity</div>
+            <form id="classesForm">
+                <div style="margin-bottom: 30px;">
+                    <label class="field-label">Select File</label>
+                    <input type="file" id="classesFile" accept=".csv" required>
+                </div>
+                <button type="submit" class="action-btn">Sync Classes</button>
+            </form>
+            <div id="classesResult" class="result-toast"></div>
+        </section>
+
+        <!-- STUDENTS MODULE -->
+        <section id="students" class="module-body glass-card">
+            <h2 style="margin-bottom: 10px;">Smart Student Sync</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Intelligent "All-in-One" migration including
+                automated class creation.</p>
+
+            <div class="info-panel">
+                <strong>Headers:</strong> section_name, class_name, first_name, last_name, admission_number, dob,
+                gender<br>
+                <em>Note: Missing sections/classes will be generated on-the-fly.</em>
+            </div>
+
+            <form id="studentsForm">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="autoAssignFees" checked>
+                    <span>Enable <strong>Auto-Financial Binding</strong> (Generate fee bills immediately)</span>
+                </label>
+                <div style="margin-bottom: 30px;">
+                    <label class="field-label">Source Student Data (CSV)</label>
+                    <input type="file" id="studentsFile" accept=".csv" required>
+                </div>
+                <button type="submit" class="action-btn">🚀 Launch Student Import</button>
+            </form>
+            <div id="studentsResult" class="result-toast"></div>
+        </section>
+
+        <!-- MAPPING MODULE -->
+        <section id="mapping" class="module-body glass-card">
+            <h2 style="margin-bottom: 10px;">Relationship Mapping</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Establish complex database relationships via CSV.
+            </p>
+
+            <div class="mapping-grid">
+                <div
+                    style="background: rgba(248, 250, 252, 0.5); padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin-bottom: 15px;">Parent ⟷ Student</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Use [parent_email,
+                        student_admission_number].</p>
+                    <form id="mapParentsForm">
+                        <input type="file" id="parentMapFile" accept=".csv" required style="margin-bottom: 15px;">
+                        <button type="submit" class="action-btn" style="padding: 12px; font-size: 14px;">Bind
+                            Relationships</button>
+                    </form>
+                    <div id="parentMapResult" class="result-toast"></div>
+                </div>
+
+                <div
+                    style="background: rgba(248, 250, 252, 0.5); padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin-bottom: 15px;">Teacher ⟷ Class</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Use [teacher_email,
+                        class_id].</p>
+                    <form id="assignTeachersForm">
+                        <input type="file" id="teacherAssignFile" accept=".csv" required style="margin-bottom: 15px;">
+                        <button type="submit" class="action-btn" style="padding: 12px; font-size: 14px;">Assign
+                            Teachers</button>
+                    </form>
+                    <div id="teacherAssignResult" class="result-toast"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEES MODULE -->
+        <section id="fees" class="module-body glass-card">
+            <h2 style="margin-bottom: 10px;">Financial Structure</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Global and class-specific fee templates.</p>
+            <div class="info-panel">
+                <strong>Schema:</strong> [fee_name, amount, fee_scope, session_id, term_id, section_id, class_id]<br>
+                <em>Scopes allowable: school | section | class</em>
+            </div>
+            <form id="feesForm">
+                <div style="margin-bottom: 30px;">
+                    <label class="field-label">Deployment File</label>
+                    <input type="file" id="feesFile" accept=".csv" required>
+                </div>
+                <button type="submit" class="action-btn">Initialize Billing</button>
+            </form>
+            <div id="feesResult" class="result-toast"></div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = "https://school-api.daynapp.com/api";
+        let authToken = "";
+
+        function switchModule(el) {
+            const modId = el.getAttribute('data-module');
+            document.querySelectorAll('.module-body').forEach(m => m.classList.remove('active'));
+            document.getElementById(modId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const loginResult = document.getElementById('loginResult');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            loginResult.style.display = 'block';
+            loginResult.className = 'result-toast';
+            loginResult.innerHTML = 'Connecting to Secure Server...';
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const res = await response.json();
+                if (!response.ok) throw new Error(res.message || 'Verification failed');
+
+                authToken = res.data.token;
+
+                // Portal Entry
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('navItems').style.display = 'flex';
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('schoolDisplay').style.display = 'block';
+                document.getElementById('users').style.display = 'block';
+
+                fetchSchools();
+            } catch (err) {
+                loginResult.className = 'result-toast error';
+                loginResult.innerHTML = `<strong>Access Denied:</strong> ${err.message}`;
+            }
+        });
+
+        async function fetchSchools() {
+            const schoolSelect = document.getElementById('schoolSelect');
+            try {
+                const response = await fetch(`${API_URL}/schools`, {
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
+                });
+                const res = await response.json();
+                const schools = res.data.data || res.data;
+                schoolSelect.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            } catch (err) {
+                schoolSelect.innerHTML = '<option value="">Network Error</option>';
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        async function bootstrapUpload(formId, endpoint, fileInputId, resultBoxId, extras = {}) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const schoolId = document.getElementById('schoolSelect').value;
+                const resultBox = document.getElementById(resultBoxId);
+                const fileInput = document.getElementById(fileInputId);
+
+                if (!schoolId) return alert('Select institutional context first.');
+
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-toast';
+                resultBox.innerHTML = '⏳ Processing Data Stream...';
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('school_id', schoolId);
+
+                for (const [key, val] of Object.entries(extras)) {
+                    formData.append(key, typeof val === 'function' ? val() : val);
+                }
+
+                try {
+                    const response = await fetch(`${API_URL}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || 'Process Interrupted');
+
+                    resultBox.className = 'result-toast success';
+                    resultBox.innerHTML = `<strong>✅ Migration Success</strong><br>${data.message}`;
+
+                    const count = data.imported_count || data.mapped_count;
+                    if (count) resultBox.innerHTML += `<br>Entities Processed: ${count}`;
+
+                    if (data.errors && data.errors.length) {
+                        resultBox.innerHTML += `<div style="margin-top:10px; font-size:12px; opacity:0.8;">⚠️ Warnings:<br>${data.errors.join('<br>')}</div>`;
+                    }
+                } catch (err) {
+                    resultBox.className = 'result-toast error';
+                    resultBox.innerHTML = `<strong>❌ Critical Error:</strong> ${err.message}`;
+                }
+            });
+        }
+
+        // --- Bootstrap Modules ---
+        bootstrapUpload('usersForm', '/import/users', 'usersFile', 'usersResult', {
+            'role': () => document.getElementById('userRole').value
+        });
+        bootstrapUpload('sectionsForm', '/import/sections', 'sectionsFile', 'sectionsResult');
+        bootstrapUpload('classesForm', '/import/classes', 'classesFile', 'classesResult');
+        bootstrapUpload('studentsForm', '/import/students', 'studentsFile', 'studentsResult', {
+            'auto_assign_fees': () => document.getElementById('autoAssignFees').checked ? 1 : 0
+        });
+        bootstrapUpload('feesForm', '/import/fees', 'feesFile', 'feesResult');
+        bootstrapUpload('mapParentsForm', '/import/map-parents', 'parentMapFile', 'parentMapResult');
+        bootstrapUpload('assignTeachersForm', '/import/assign-teachers', 'teacherAssignFile', 'teacherAssignResult');
+
+    </script>
+</body>
+
+</html>

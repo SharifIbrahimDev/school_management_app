@@ -10,6 +10,9 @@ import '../../core/services/user_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../core/utils/error_handler.dart';
 import 'add_class_screen.dart';
 import 'class_detail_screen.dart';
 
@@ -103,22 +106,13 @@ class _ClassListScreenState extends State<ClassListScreen> {
   }
 
   Future<void> _deleteClass(ClassModel classItem) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Class'),
-        content: Text('Are you sure you want to delete ${classItem.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Class',
+      content: 'Are you sure you want to delete ${classItem.name}?',
+      confirmText: 'Delete',
+      confirmColor: Colors.red,
+      icon: Icons.delete_outline_rounded,
     );
 
     if (confirmed == true) {
@@ -133,7 +127,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          AppSnackbar.showError(context, message: 'Error deleting class: $e');
+          AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
@@ -155,21 +149,25 @@ class _ClassListScreenState extends State<ClassListScreen> {
         ],
       ),
       floatingActionButton: _selectedSectionId != null && isPrincipal
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddClassScreen(
-                      schoolId: _currentUser?.schoolId ?? '',
-                      sectionId: _selectedSectionId!,
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddClassScreen(
+                        schoolId: _currentUser?.schoolId ?? '',
+                        sectionId: _selectedSectionId!,
+                      ),
                     ),
-                  ),
-                ).then((_) => _loadClasses());
-              },
-              backgroundColor: theme.colorScheme.primary,
-              tooltip: 'Add Class',
-              child: const Icon(Icons.add, color: Colors.white),
+                  ).then((_) => _loadClasses());
+                },
+                backgroundColor: theme.colorScheme.primary,
+                tooltip: 'Add Class',
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text('Add Class', style: TextStyle(color: Colors.white)),
+              ),
             )
           : null,
       body: Container(
@@ -239,14 +237,25 @@ class _ClassListScreenState extends State<ClassListScreen> {
 
                     Expanded(
                       child: _classes.isEmpty && !_isLoading
-                          ? Center(child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.class_outlined, size: 64, color: theme.disabledColor),
-                                const SizedBox(height: 16),
-                                Text('No classes found', style: theme.textTheme.titleMedium?.copyWith(color: theme.disabledColor)),
-                              ],
-                            ))
+                          ? EmptyStateWidget(
+                              icon: Icons.class_outlined,
+                              title: 'No Classes Yet',
+                              message: 'Add your first class to this section to start managing students',
+                              actionButtonText: isPrincipal ? 'Add Class' : null,
+                              onActionPressed: isPrincipal
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AddClassScreen(
+                                            schoolId: _currentUser?.schoolId ?? '',
+                                            sectionId: _selectedSectionId!,
+                                          ),
+                                        ),
+                                      ).then((_) => _loadClasses());
+                                    }
+                                  : null,
+                            )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
                               itemCount: _classes.length,

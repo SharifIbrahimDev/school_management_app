@@ -10,6 +10,7 @@ import '../../widgets/detail_item.dart';
 import '../../widgets/student_list_widget.dart';
 import '../student/add_student_screen.dart';
 import 'assign_teacher_screen.dart';
+import 'edit_class_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class ClassDetailScreen extends StatefulWidget {
@@ -74,6 +75,26 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     return Scaffold(
       appBar: CustomAppBar(
         title: widget.classModel.name,
+        actions: [
+          if (isPrincipal)
+            IconButton(
+              icon: const Icon(Icons.edit_rounded, color: Colors.white),
+              tooltip: 'Edit Class',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditClassScreen(
+                      classModel: widget.classModel,
+                      schoolId: _currentUser?.schoolId ?? '',
+                      sectionId: widget.classModel.sectionId,
+                    ),
+                  ),
+                ).then((_) => _loadData());
+              },
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: isPrincipal
           ? FloatingActionButton(

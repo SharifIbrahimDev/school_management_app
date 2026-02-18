@@ -14,6 +14,9 @@ import '../../core/services/dashboard_filter_service.dart';
 import 'dashboard_content.dart';
 import '../../widgets/global_search_delegate.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class ProprietorDashboard extends StatefulWidget {
   final String schoolId;
@@ -236,7 +239,7 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: LoadingIndicator(message: 'Loading your dashboard...')),
       );
     }
 
@@ -351,27 +354,10 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
   Widget _buildErrorScreen(String error) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  error,
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _refreshDashboard,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+        child: ErrorDisplayWidget(
+          error: error,
+          onRetry: _refreshDashboard,
+          showContactSupport: true,
         ),
       ),
     );
@@ -380,34 +366,12 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
   Widget _buildNoSectionsScreen() {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'No sections found',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Please create a section or contact support',
-                style: TextStyle(
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _refreshDashboard,
-                child: const Text('Refresh'),
-              ),
-            ],
-          ),
+        child: EmptyStateWidget(
+          icon: Icons.school_outlined,
+          title: 'No Sections Found',
+          message: 'You need to create at least one section to see your dashboard data.',
+          actionButtonText: 'Create Section',
+          onActionPressed: () => Navigator.pushNamed(context, '/add-section'),
         ),
       ),
     );

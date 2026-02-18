@@ -42,6 +42,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.arguments != null) {
+      _selectedSectionId = widget.arguments!['sectionId']?.toString();
+      _selectedClassId = widget.arguments!['classId']?.toString();
+    }
     _loadInitialData();
   }
 
@@ -61,6 +65,10 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         AppSnackbar.showError(context, message: 'Error loading sections: $e');
         setState(() => _isLoadingData = false);
       }
+    }
+
+    if (_selectedSectionId != null) {
+      await _loadClasses(_selectedSectionId!);
     }
   }
 

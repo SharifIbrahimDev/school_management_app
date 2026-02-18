@@ -9,6 +9,10 @@ import '../../widgets/financial_chart.dart';
 import '../../widgets/analytics_charts.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/responsive_widgets.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/utils/error_handler.dart';
+import '../../widgets/error_display_widget.dart';
 
 class ReportsDashboardScreen extends StatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -51,7 +55,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading reports: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -87,7 +91,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
           ),
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: LoadingIndicator(message: 'Generating financial intelligence...'))
             : AppTheme.constrainedContent(
                 context: context,
                 child: SingleChildScrollView(

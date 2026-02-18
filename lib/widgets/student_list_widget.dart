@@ -7,6 +7,7 @@ import '../core/services/user_service_api.dart';
 import '../core/services/auth_service_api.dart';
 import '../core/utils/app_theme.dart';
 import '../core/utils/responsive_utils.dart';
+import '../screens/student/add_student_screen.dart';
 import '../screens/student/student_detail_screen.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/error_display_widget.dart';
@@ -112,7 +113,20 @@ class _StudentListWidgetState extends State<StudentListWidget> {
                     title: 'No Students Yet',
                     message: 'Add your first student to get started',
                     actionButtonText: canAddStudent ? 'Add Student' : null,
-                    onActionPressed: canAddStudent ? () => Navigator.pushNamed(context, '/add-student') : null,
+                    onActionPressed: canAddStudent ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddStudentScreen(
+                            arguments: {
+                              'schoolId': widget.schoolId,
+                              'sectionId': widget.sectionId,
+                              'classId': widget.classId,
+                            },
+                          ),
+                        ),
+                      ).then((_) => setState(() {}));
+                    } : null,
                   );
                 }
 
@@ -293,7 +307,7 @@ class _StudentListWidgetState extends State<StudentListWidget> {
         ),
         if (_isSelectionMode)
           Positioned(
-            bottom: 20,
+            bottom: context.isMobile ? 100 : 20, // Lift higher on mobile to clear bottom nav
             left: 20,
             right: 20,
             child: Container(

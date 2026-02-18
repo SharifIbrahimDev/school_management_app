@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/utils/error_handler.dart';
 
 /// A reusable widget to display user-friendly error messages
 /// Maps technical errors to understandable messages with retry options
@@ -19,7 +20,7 @@ class ErrorDisplayWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userFriendlyMessage = _getUserFriendlyMessage(error);
+    final userFriendlyMessage = ErrorHandler.getFriendlyMessage(error);
     
     return Center(
       child: Padding(
@@ -121,57 +122,5 @@ class ErrorDisplayWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// Maps technical error messages to user-friendly ones
-  String _getUserFriendlyMessage(String error) {
-    final lowerError = error.toLowerCase();
-    
-    // Network errors
-    if (lowerError.contains('socket') || 
-        lowerError.contains('network') ||
-        lowerError.contains('connection')) {
-      return 'Unable to connect to the server. Please check your internet connection and try again.';
-    }
-    
-    // Authentication errors
-    if (lowerError.contains('unauthorized') || 
-        lowerError.contains('401') ||
-        lowerError.contains('unauthenticated')) {
-      return 'Your session has expired. Please log in again.';
-    }
-    
-    if (lowerError.contains('403') || 
-        lowerError.contains('forbidden') ||
-        lowerError.contains('permission')) {
-      return 'You don\'t have permission to perform this action.';
-    }
-    
-    // Validation errors
-    if (lowerError.contains('validation') || 
-        lowerError.contains('invalid')) {
-      return 'Please check your input and try again.';
-    }
-    
-    // Not found errors
-    if (lowerError.contains('404') || 
-        lowerError.contains('not found')) {
-      return 'The requested information could not be found.';
-    }
-    
-    // Server errors
-    if (lowerError.contains('500') || 
-        lowerError.contains('server error') ||
-        lowerError.contains('internal')) {
-      return 'Our servers are experiencing issues. Please try again in a few moments.';
-    }
-    
-    // Timeout errors
-    if (lowerError.contains('timeout')) {
-      return 'The request took too long. Please try again.';
-    }
-    
-    // Default message
-    return 'An unexpected error occurred. Please try again or contact support if the problem persists.';
   }
 }

@@ -7,7 +7,7 @@ import '../core/services/auth_service_api.dart';
 import '../core/services/class_service_api.dart';
 import '../core/services/user_service_api.dart';
 import '../core/utils/formatters.dart';
-import '../core/utils/app_snackbar.dart';
+import 'app_snackbar.dart';
 import '../screens/class/class_detail_screen.dart';
 import '../screens/class/edit_class_screen.dart';
 

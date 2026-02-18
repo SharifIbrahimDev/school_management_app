@@ -1440,6 +1440,20 @@ class _DashboardContentState extends State<DashboardContent> {
                     ? null
                     : () => Navigator.push(
                           context,
+                          MaterialPageRoute(builder: (context) => const ClassListScreen()),
+                        ),
+                icon: const Icon(Icons.class_rounded, size: 18),
+                label: const Text('Manage Classes'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                ),
+              ),
+            if (widget.role == 'Proprietor')
+              OutlinedButton.icon(
+                onPressed: widget.isLoading
+                    ? null
+                    : () => Navigator.push(
+                          context,
                           MaterialPageRoute(builder: (context) => const AddStudentScreen()),
                         ),
                 icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),

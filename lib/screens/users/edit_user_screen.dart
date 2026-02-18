@@ -4,6 +4,7 @@ import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/services/user_service_api.dart';
 import '../../core/utils/app_theme.dart';
+import '../../core/utils/validators.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/app_snackbar.dart';
@@ -79,7 +80,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       }
     } catch (e) {
       if (context.mounted) {
-        AppSnackbar.showError(context, message: 'Error updating user: $e');
+        AppSnackbar.friendlyError(context, error: e);
         setState(() => _isLoading = false);
       }
     }
@@ -151,6 +152,8 @@ class _EditUserScreenState extends State<EditUserScreen> {
                           prefixIcon: Icons.phone,
                           keyboardType: TextInputType.phone,
                           isRequired: true,
+                          maxLength: 11,
+                          validator: (value) => Validators.validatePhoneNumber(value),
                         ),
                         const SizedBox(height: 16),
                         CustomTextField(

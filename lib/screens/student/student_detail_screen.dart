@@ -9,11 +9,15 @@ import '../../core/services/fee_service_api.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/app_snackbar.dart';
+import '../../widgets/app_snackbar.dart';
 import '../../widgets/detail_item.dart';
 import 'student_section_linking_screen.dart';
 import 'assign_parent_screen.dart';
+import 'edit_student_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/utils/error_handler.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   final StudentModel student;
@@ -110,25 +114,13 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   }
 
   Future<void> _deleteStudent() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Student'),
-        content: Text('Are you sure you want to delete ${widget.student.fullName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: AppTheme.errorColor),
-            ),
-          ),
-        ],
-      ),
+    final confirm = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Student',
+      content: 'Are you sure you want to delete ${widget.student.fullName}? This action will remove all student records and cannot be undone.',
+      confirmText: 'Delete Student',
+      confirmColor: Colors.red,
+      icon: Icons.person_remove_rounded,
     );
 
     if (confirm == true) {
@@ -145,7 +137,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       } catch (e) {
         if (mounted) {
           setState(() => _isDeleting = false);
-          AppSnackbar.showError(context, message: 'Error deleting student: $e');
+          AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
@@ -192,8 +184,14 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navigate to edit screen
-              AppSnackbar.showInfo(context, message: 'Edit feature coming soon');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditStudentScreen(student: widget.student),
+                ),
+              ).then((result) {
+                if (result == true) _loadData();
+              });
             },
             icon: const Icon(Icons.edit, size: 20),
             label: const Text("Edit"),
@@ -285,7 +283,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         ),
         child: SafeArea(
           child: _loadingInfo
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: LoadingIndicator(message: 'Fetching student record...'))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(

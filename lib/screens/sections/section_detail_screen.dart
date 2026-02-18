@@ -8,12 +8,16 @@ import '../../core/services/session_service_api.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/services/section_service_api.dart';
 import '../../core/services/user_service_api.dart';
-import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../core/utils/error_handler.dart';
 import 'edit_section_screen.dart';
 import 'assign_principal_screen.dart';
 import 'assign_bursar_screen.dart';
-import '../../widgets/custom_app_bar.dart';
 
 class SectionDetailScreen extends StatefulWidget {
   final SectionModel section;
@@ -80,14 +84,13 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
   }
 
   Future<void> _deleteSection(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: 'Delete Section',
-        content: 'Are you sure you want to delete ${widget.section.sectionName}? This action cannot be undone.',
-        confirmText: 'Delete',
-        confirmColor: Colors.red,
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Section',
+      content: 'Are you sure you want to delete ${widget.section.sectionName}? This will permanently remove all data associated with this section and cannot be undone.',
+      confirmText: 'Delete Forever',
+      confirmColor: Colors.red,
+      icon: Icons.delete_forever_rounded,
     );
 
     if (confirmed == true && mounted) {
@@ -96,15 +99,11 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
         await sectionService.deleteSection(int.tryParse(widget.section.id) ?? 0);
         if (mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Section deleted successfully'), backgroundColor: Colors.green),
-          );
+          AppSnackbar.showSuccess(context, message: 'Section deleted successfully');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-          );
+          AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
@@ -113,26 +112,20 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
   // Placeholder for de-assigning principal/bursar as API might not support it yet
   Future<void> _deAssignPrincipal(BuildContext context, String userId, String userName) async {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('De-assign feature coming soon'), backgroundColor: Colors.orange),
-        );
+        AppSnackbar.showWarning(context, message: 'De-assign feature coming soon');
       }
   }
 
   Future<void> _deAssignBursar(BuildContext context, String userId, String userName) async {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('De-assign feature coming soon'), backgroundColor: Colors.orange),
-        );
+        AppSnackbar.showWarning(context, message: 'De-assign feature coming soon');
       }
   }
 
   Future<void> _deleteFee(BuildContext context, String feeId, String feeType) async {
       // Placeholder for delete fee
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Delete fee feature coming soon'), backgroundColor: Colors.orange),
-        );
+        AppSnackbar.showWarning(context, message: 'Delete fee feature coming soon');
       }
   }
 
@@ -389,9 +382,12 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                       ),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(child: LoadingIndicator(message: 'Fetching academic sessions...'));
                         } else if (snapshot.hasError) {
-                          return const Text('Error loading sessions');
+                          return ErrorDisplayWidget(
+                            error: snapshot.error.toString(),
+                            onRetry: () => setState(() {}),
+                          );
                         } else {
                           final sessionNames = snapshot.data ?? [];
                           if (sessionNames.isEmpty) {

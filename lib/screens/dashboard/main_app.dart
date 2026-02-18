@@ -111,6 +111,7 @@ class _MainAppState extends State<MainApp> {
         return [
           ProprietorDashboard(schoolId: widget.schoolId),
           const SectionListScreen(),
+          const ClassListScreen(),
           const UsersListScreen(),
           const ReportsDashboardScreen(),
           ProfileScreen(),
@@ -162,6 +163,7 @@ class _MainAppState extends State<MainApp> {
       case UserRole.proprietor:
         items.addAll([
           const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Sections'),
+          const BottomNavigationBarItem(icon: Icon(Icons.class_rounded), label: 'Classes'),
           const BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Users'),
           const BottomNavigationBarItem(icon: Icon(Icons.analytics_rounded), label: 'Reports'),
         ]);

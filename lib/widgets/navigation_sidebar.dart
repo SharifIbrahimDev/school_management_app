@@ -167,6 +167,7 @@ class NavigationSidebar extends StatelessWidget {
       case UserRole.proprietor:
         items.addAll([
           _NavItem(Icons.school_rounded, 'Sections'),
+          _NavItem(Icons.class_rounded, 'Classes'),
           _NavItem(Icons.people_alt_rounded, 'Users'),
           _NavItem(Icons.analytics_rounded, 'Reports'),
         ]);

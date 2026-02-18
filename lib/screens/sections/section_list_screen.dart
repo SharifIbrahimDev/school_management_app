@@ -9,6 +9,7 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/confirmation_dialog.dart';
 import 'add_section_screen.dart';
 import 'section_detail_screen.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -69,22 +70,13 @@ class _SectionListScreenState extends State<SectionListScreen> {
   }
 
   Future<void> _deleteSection(SectionModel section) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Section'),
-        content: Text('Are you sure you want to delete "${section.sectionName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: TextStyle(color: AppTheme.errorColor)),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Section',
+      content: 'Are you sure you want to delete "${section.sectionName}"? This cannot be undone.',
+      confirmText: 'Delete',
+      confirmColor: Colors.red,
+      icon: Icons.delete_forever_rounded,
     );
 
     if (confirmed == true) {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/utils/app_theme.dart';
+import '../../core/utils/validators.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
@@ -68,7 +69,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      AppSnackbar.showError(context, message: 'Update failed: ${e.toString()}');
+      AppSnackbar.friendlyError(context, error: e);
     }
   }
 
@@ -141,6 +142,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       labelText: 'Phone Number',
                       prefixIcon: Icons.phone,
                       keyboardType: TextInputType.phone,
+                      maxLength: 11,
+                      validator: (value) => Validators.validatePhoneNumber(value),
                     ),
                     const SizedBox(height: 16),
                     CustomTextField(

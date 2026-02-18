@@ -32,7 +32,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('full_name');
-            $table->enum('role', ['proprietor', 'principal', 'bursar', 'teacher', 'parent']);
+            $table->enum('role', ['admin', 'proprietor', 'principal', 'bursar', 'teacher', 'parent']);
             $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
             $table->boolean('is_active')->default(true);
             $table->timestamp('email_verified_at')->nullable();

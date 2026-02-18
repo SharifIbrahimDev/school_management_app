@@ -8,6 +8,10 @@ import '../../core/services/subject_service_api.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../core/utils/error_handler.dart';
 
 class SubjectListScreen extends StatefulWidget {
   const SubjectListScreen({super.key});
@@ -63,16 +67,13 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
   }
 
   Future<void> _deleteSubject(SubjectModel subject) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Subject'),
-        content: Text('Are you sure you want to delete ${subject.name}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+    final confirm = await ConfirmationDialog.show(
+      context,
+      title: 'Delete Subject',
+      content: 'Are you sure you want to delete ${subject.name}? This will affect all exam results linked to this subject.',
+      confirmText: 'Delete Subject',
+      confirmColor: Colors.red,
+      icon: Icons.book_rounded,
     );
 
     if (confirm == true) {
@@ -80,7 +81,7 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
         await Provider.of<SubjectServiceApi>(context, listen: false).deleteSubject(subject.id);
         _loadSubjects();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -117,7 +118,7 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: LoadingIndicator(message: 'Fetching curriculum...'))
               : _error != null
                   ? ErrorDisplayWidget(error: _error!, onRetry: _loadSubjects)
                   : _subjects.isEmpty
@@ -264,7 +265,7 @@ class _SubjectDialogState extends State<_SubjectDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClassId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a class')));
+      AppSnackbar.showWarning(context, message: 'Please select a class');
       return;
     }
 
@@ -290,7 +291,7 @@ class _SubjectDialogState extends State<_SubjectDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppSnackbar.friendlyError(context, error: e);
         setState(() => _isLoading = false);
       }
     }
