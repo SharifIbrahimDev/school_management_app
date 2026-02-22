@@ -18,9 +18,11 @@ class StudentController extends Controller
     public function index(Request $request, string $schoolId): JsonResponse
     {
         $students = Student::where('school_id', $schoolId)
-            ->with(['school', 'section', 'classModel', 'transactions'])
+            ->with(['school', 'sections', 'classModel', 'transactions'])
             ->when($request->has('section_id'), function ($query) use ($request) {
-                $query->where('section_id', $request->section_id);
+                $query->whereHas('sections', function ($q) use ($request) {
+                    $q->where('sections.id', $request->section_id);
+                });
             })
             ->when($request->has('class_id'), function ($query) use ($request) {
                 $query->where('class_id', $request->class_id);
@@ -54,6 +56,8 @@ class StudentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'section_id' => 'required|exists:sections,id',
+            'section_ids' => 'sometimes|array',
+            'section_ids.*' => 'exists:sections,id',
             'class_id' => 'required|exists:classes,id',
             'student_name' => 'required|string|max:255',
             'admission_number' => 'nullable|string|max:100|unique:students,admission_number',
@@ -79,7 +83,6 @@ class StudentController extends Controller
 
         $student = Student::create([
             'school_id' => $schoolId,
-            'section_id' => $request->section_id,
             'class_id' => $request->class_id,
             'student_name' => $request->student_name,
             'admission_number' => $admissionNumber,
@@ -94,10 +97,14 @@ class StudentController extends Controller
             'is_active' => $request->is_active ?? true,
         ]);
 
+        // Attach sections
+        $sectionIds = $request->section_ids ?? [$request->section_id];
+        $student->sections()->attach($sectionIds);
+
         return response()->json([
             'success' => true,
             'message' => 'Student created successfully',
-            'data' => $student->load(['section', 'classModel', 'parent']),
+            'data' => $student->load(['sections', 'classModel', 'parent']),
         ], 201);
     }
 
@@ -107,7 +114,7 @@ class StudentController extends Controller
     public function show(string $schoolId, string $id): JsonResponse
     {
         $student = Student::where('school_id', $schoolId)
-            ->with(['school', 'section', 'classModel', 'transactions'])
+            ->with(['school', 'sections', 'classModel', 'transactions'])
             ->findOrFail($id);
 
         return response()->json([
@@ -123,6 +130,8 @@ class StudentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'section_id' => 'sometimes|required|exists:sections,id',
+            'section_ids' => 'sometimes|array',
+            'section_ids.*' => 'exists:sections,id',
             'class_id' => 'sometimes|required|exists:classes,id',
             'student_name' => 'sometimes|required|string|max:255',
             'admission_number' => 'nullable|string|max:100|unique:students,admission_number,'.$id,
@@ -145,7 +154,15 @@ class StudentController extends Controller
         }
 
         $student = Student::where('school_id', $schoolId)->findOrFail($id);
-        $student->update($request->all());
+        
+        $data = $request->except(['section_id', 'section_ids']);
+        $student->update($data);
+
+        if ($request->has('section_ids')) {
+            $student->sections()->sync($request->section_ids);
+        } elseif ($request->has('section_id')) {
+            $student->sections()->sync([$request->section_id]);
+        }
 
         // Ensure full_name is included in the response for frontend compatibility
         $student->full_name = $student->student_name;
@@ -153,7 +170,7 @@ class StudentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Student updated successfully',
-            'data' => $student->load(['section', 'classModel', 'parent']),
+            'data' => $student->load(['sections', 'classModel', 'parent']),
         ]);
     }
 
@@ -194,7 +211,8 @@ class StudentController extends Controller
      */
     public function paymentSummary(string $schoolId, string $id): JsonResponse
     {
-        $student = Student::where('school_id', $schoolId)->findOrFail($id);
+        $student = Student::where('school_id', $schoolId)->with('sections')->findOrFail($id);
+        $sectionIds = $student->sections->pluck('id')->toArray();
 
         $summary = [
             'total_paid' => $student->transactions()->where('transaction_type', 'income')->sum('amount'),
@@ -207,9 +225,9 @@ class StudentController extends Controller
                 ->first(),
         ];
 
-        // Calculate total fees across all relevant scopes
+        // Calculate total fees across all relevant scopes and all sections the student belongs to
         $totalFees = \App\Models\Fee::where('school_id', $schoolId)
-            ->where('section_id', $student->section_id)
+            ->whereIn('section_id', $sectionIds)
             ->where('is_active', true)
             ->where(function ($query) use ($student) {
                 // Section-wide fees (class_id and student_id are null)
@@ -269,8 +287,13 @@ class StudentController extends Controller
                     }
                 }
 
+                $sectionId = $studentData['section_id'];
+                unset($studentData['section_id']);
+
                 $student = Student::create(array_merge($studentData, ['school_id' => $schoolId]));
-                $imported[] = $student;
+                $student->sections()->attach($sectionId);
+                
+                $imported[] = $student->load('sections');
             } catch (\Exception $e) {
                 $errors[] = "Row {$index}: ".$e->getMessage();
             }

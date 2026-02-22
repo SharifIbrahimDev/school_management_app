@@ -128,8 +128,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              theme.colorScheme.primary.withOpacity(0.1),
-              theme.colorScheme.secondary.withOpacity(0.2),
+              theme.colorScheme.primary.withValues(alpha: 0.1),
+              theme.colorScheme.secondary.withValues(alpha: 0.2),
               theme.colorScheme.surface,
             ],
             stops: const [0.0, 0.4, 1.0],
@@ -149,7 +149,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                     opacity: 0.8,
                     borderRadius: 24,
                     hasGlow: true,
-                    borderColor: theme.dividerColor.withOpacity(0.1),
+                    borderColor: theme.dividerColor.withValues(alpha: 0.1),
                   ),
                   child: Column(
                     children: [

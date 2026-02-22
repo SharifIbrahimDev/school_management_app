@@ -179,7 +179,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                           label: 'Section',
                           value: _selectedSectionId,
                           items: _sections.map((s) => DropdownMenuItem(value: s.id, child: Text(s.sectionName))).toList(),
-                          onChanged: (val) {
+                          onChanged: _isSubmitting ? null : (val) {
                             setState(() => _selectedSectionId = val);
                             if (val != null) _loadClasses(val);
                           },
@@ -189,7 +189,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                           label: 'Class',
                           value: _selectedClassId,
                           items: _classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                          onChanged: (val) {
+                          onChanged: _isSubmitting ? null : (val) {
                             setState(() => _selectedClassId = val);
                             _loadSubjects();
                           },
@@ -199,7 +199,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                           label: 'Subject',
                           value: _selectedSubjectId,
                           items: _subjects.map((s) => DropdownMenuItem(value: s.id.toString(), child: Text(s.name))).toList(),
-                          onChanged: (val) => setState(() => _selectedSubjectId = val),
+                          onChanged: _isSubmitting ? null : (val) => setState(() => _selectedSubjectId = val),
                         ),
                         const SizedBox(height: 24),
                         TextFormField(
@@ -214,7 +214,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                         ),
                         const SizedBox(height: 16),
                         InkWell(
-                          onTap: _selectDate,
+                          onTap: _isSubmitting ? null : _selectDate,
                           borderRadius: BorderRadius.circular(16),
                           child: IgnorePointer(
                             child: TextFormField(

@@ -11,12 +11,15 @@ import '../../core/services/term_service_api.dart';
 import '../../core/services/class_service_api.dart';
 import '../../core/services/transaction_service_api.dart';
 import '../../core/services/dashboard_filter_service.dart';
+import '../../core/services/attendance_service_api.dart';
+import '../../core/services/exam_service_api.dart';
 import 'dashboard_content.dart';
 import '../../widgets/global_search_delegate.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/custom_drawer.dart';
 
 class ProprietorDashboard extends StatefulWidget {
   final String schoolId;
@@ -45,6 +48,9 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
     'cashInAccount': 0.0,
     'balanceRemaining': 0.0,
   };
+  
+  Map<String, dynamic>? _attendanceSummary;
+  Map<String, dynamic>? _academicAnalytics;
   
   bool _isLoading = true;
   String? _errorMessage;
@@ -221,6 +227,8 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
         };
         _isLoading = false;
       });
+
+      await _loadProprietorAnalytics(_selectedSectionId!);
     } catch (e) {
       debugPrint('Error loading stats: $e');
       if (!mounted) return;
@@ -228,6 +236,33 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
         _isLoading = false;
         // Don't show error message for stats failure, just show empty stats
       });
+    }
+  }
+
+  Future<void> _loadProprietorAnalytics(String sectionId) async {
+    try {
+      final attendanceService = Provider.of<AttendanceServiceApi>(context, listen: false);
+      final examService = Provider.of<ExamServiceApi>(context, listen: false);
+
+      final attendancePromise = attendanceService.getSectionSummary(
+        sectionId: int.parse(sectionId),
+        date: DateTime.now(),
+      );
+      
+      final examPromise = examService.getAcademicAnalytics(
+        sectionId: int.parse(sectionId),
+      );
+
+      final results = await Future.wait<dynamic>([attendancePromise, examPromise]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _attendanceSummary = results[0];
+        _academicAnalytics = results[1];
+      });
+    } catch (e) {
+      debugPrint('Error loading proprietor analytics: $e');
     }
   }
 
@@ -267,6 +302,7 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
           ),
         ],
       ),
+      drawer: const CustomDrawer(),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -345,6 +381,8 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
             },
             onRefresh: _refreshDashboard,
             role: 'Proprietor',
+            attendanceSummary: _attendanceSummary,
+            academicAnalytics: _academicAnalytics,
           ),
         ),
       ),

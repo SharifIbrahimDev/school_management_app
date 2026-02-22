@@ -92,8 +92,8 @@ class _EditSectionScreenState extends State<EditSectionScreen> {
             end: Alignment.bottomRight,
             colors: [
               theme.colorScheme.surface,
-              theme.colorScheme.surface.withOpacity(0.8),
-              theme.colorScheme.primary.withOpacity(0.05),
+              theme.colorScheme.surface.withValues(alpha: 0.8),
+              theme.colorScheme.primary.withValues(alpha: 0.05),
             ],
           ),
         ),

@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:csv/csv.dart'; // Add csv package to pubspec
+import 'package:csv/csv.dart';
 import '../../core/services/import_service_api.dart';
-
 import '../../widgets/custom_app_bar.dart';
+import '../../core/utils/app_theme.dart';
+import '../../widgets/responsive_widgets.dart';
 
 class BulkImportScreen extends StatefulWidget {
   const BulkImportScreen({super.key});
@@ -16,11 +17,11 @@ class BulkImportScreen extends StatefulWidget {
 }
 
 class _BulkImportScreenState extends State<BulkImportScreen> {
-  String _selectedType = 'students'; // students, parents, teachers
+  String _selectedType = 'students';
   PlatformFile? _pickedFile;
   bool _isLoading = false;
-  List<List<dynamic>> _previewData = []; // First few rows for display
-  List<List<dynamic>> _fullData = []; // Full parsed and processed data
+  List<List<dynamic>> _previewData = [];
+  List<List<dynamic>> _fullData = [];
   String? _uploadStatus;
 
   Future<void> _pickFile() async {
@@ -28,7 +29,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv', 'txt'],
-        withData: true, // Needed for web
+        withData: true,
       );
 
       if (result != null) {
@@ -64,13 +65,11 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
 
       List<List<dynamic>> csvTable = const CsvToListConverter().convert(csvString);
       
-      // Auto-generate admission numbers for students if missing
       if (_selectedType == 'students' && csvTable.isNotEmpty) {
         final header = csvTable[0].map((e) => e.toString().trim().toLowerCase()).toList();
         int admIndex = header.indexOf('admission_number');
         if (admIndex == -1) admIndex = header.indexOf('admission number');
         
-        // If column doesn't exist, add it
         if (admIndex == -1) {
           csvTable[0].add('admission_number');
           admIndex = csvTable[0].length - 1;
@@ -78,18 +77,13 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
 
         final currentYear = DateTime.now().year;
         
-        // Iterate rows (skip header)
         for (int i = 1; i < csvTable.length; i++) {
-          // Ensure row has enough columns
           while (csvTable[i].length < csvTable[0].length) {
             csvTable[i].add('');
           }
           
           final val = csvTable[i][admIndex].toString().trim();
           if (val.isEmpty) {
-            // Generate: SCH-YEAR-RANDOM (using i for uniqueness in batch)
-            // In a real app, maybe fetch last ID from backend or use a UUID subset.
-            // Using a simple sequence for bulk import context.
             final generated = 'SCH-$currentYear-${(1000 + i).toString()}';
             csvTable[i][admIndex] = generated;
           }
@@ -98,10 +92,9 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
 
       setState(() {
         _fullData = csvTable;
-        _previewData = csvTable.take(6).toList(); // Preview first 5 rows + header
+        _previewData = csvTable.take(10).toList(); // Show more rows in preview
       });
     } catch (e) {
-      // Failed to parse
       debugPrint('Error parsing CSV: $e');
     }
   }
@@ -115,20 +108,17 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       final service = Provider.of<ImportServiceApi>(context, listen: false);
       Map<String, dynamic> result;
 
-      // Convert processed data back to CSV
       final String csvData = const ListToCsvConverter().convert(_fullData);
       final List<int> csvBytes = csvData.codeUnits;
-      // Convert List<int> to Uint8List for compatibility
       final Uint8List fileBytes = Uint8List.fromList(csvBytes);
 
       if (_selectedType == 'students') {
         result = await service.importStudents(
-          file: File(''), // Not used when bytes provided
+          file: File(''),
           fileBytes: fileBytes,
           fileName: 'processed_students.csv',
         );
       } else {
-        // For users, simple upload (unless we want to process them too later)
         result = await service.importUsers(
           file: File(''),
           fileBytes: fileBytes,
@@ -163,119 +153,267 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Bulk Import',
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Type Selector
-            DropdownButtonFormField<String>(
-              initialValue: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Import Type',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'students', child: Text('Students')),
-                DropdownMenuItem(value: 'parents', child: Text('Parents')),
-                DropdownMenuItem(value: 'teachers', child: Text('Teachers')),
+      appBar: const CustomAppBar(title: 'Data Migration Suite'),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/auth_bg_pattern.png'),
+            fit: BoxFit.cover,
+            opacity: 0.05,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTypeSelector(),
+              const SizedBox(height: 24),
+              _buildGuidelineCard(),
+              const SizedBox(height: 32),
+              _buildFilePicker(),
+              if (_previewData.isNotEmpty) ...[
+                const SizedBox(height: 40),
+                _buildPreviewSection(),
               ],
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedType = val);
-              },
+              const SizedBox(height: 48),
+              if (_uploadStatus != null) _buildStatusMessage(),
+              _buildActionButtons(),
+              const SizedBox(height: 80),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.1,
+        borderRadius: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "SELECT DATA CATEGORY",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textSecondaryColor,
+              letterSpacing: 1.5,
+            ),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedType,
+            decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
+            items: const [
+              DropdownMenuItem(value: 'students', child: Text('Student Database')),
+              DropdownMenuItem(value: 'parents', child: Text('Parent Profiles')),
+              DropdownMenuItem(value: 'teachers', child: Text('Faculty Members')),
+            ],
+            onChanged: _isLoading ? null : (val) {
+              if (val != null) {
+                setState(() {
+                  _selectedType = val;
+                  _pickedFile = null;
+                  _previewData = [];
+                  _uploadStatus = null;
+                });
+              }
+            },
+            isExpanded: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuidelineCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.neonBlue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.neonBlue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: AppTheme.neonBlue, size: 20),
+              const SizedBox(width: 12),
+              const Text(
+                'Import Guidelines',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.neonBlue),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _getFormatGuide(),
+            style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.blueGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilePicker() {
+    final hasFile = _pickedFile != null;
+    final color = hasFile ? AppTheme.neonEmerald : AppTheme.neonBlue;
+
+    return InkWell(
+      onTap: _isLoading ? null : _pickFile,
+      borderRadius: BorderRadius.circular(32),
+      child: Container(
+        height: 200,
+        decoration: AppTheme.glassDecoration(
+          context: context,
+          opacity: 0.05,
+          borderRadius: 32,
+          borderColor: color.withValues(alpha: 0.3),
+        ).copyWith(
+          border: Border.all(color: color.withValues(alpha: 0.4), style: BorderStyle.solid, width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(hasFile ? Icons.check_circle_rounded : Icons.cloud_upload_rounded, size: 48, color: color),
             ),
             const SizedBox(height: 16),
-            
-            // Guidelines
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('CSV Format Guide:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(_getFormatGuide()),
-                  ],
-                ),
-              ),
+            Text(
+              hasFile ? _pickedFile!.name : 'Drop file or Click to Browse',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-
-            // File Picker Area
-            InkWell(
-              onTap: _pickFile,
-              child: Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey, style: BorderStyle.solid),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey.shade50,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                     const Icon(Icons.cloud_upload, size: 48, color: Colors.blue),
-                     const SizedBox(height: 8),
-                     Text(
-                       _pickedFile != null ? _pickedFile!.name : 'Click to select CSV file',
-                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                     ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 8),
+            Text(
+              hasFile ? '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB' : 'Standard CSV or TXT format supported',
+              style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
             ),
-            const SizedBox(height: 24),
-
-            // Preview Table
-            if (_previewData.isNotEmpty) ...[
-               const Text('Preview (First 5 rows):', style: TextStyle(fontWeight: FontWeight.bold)),
-               SingleChildScrollView(
-                 scrollDirection: Axis.horizontal,
-                 child: DataTable(
-                   columns: _previewData[0].map((e) => DataColumn(label: Text(e.toString()))).toList(),
-                   rows: _previewData.skip(1).map((row) {
-                     return DataRow(cells: row.map((cell) => DataCell(Text(cell.toString()))).toList());
-                   }).toList(),
-                 ),
-               ),
-               const SizedBox(height: 24),
-            ],
-
-            // Action Button
-            if (_uploadStatus != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: _uploadStatus!.startsWith('Success') ? Colors.green.shade100 : Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(_uploadStatus!, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-
-             FilledButton(
-               onPressed: _fullData.isNotEmpty && !_isLoading ? _uploadFile : null,
-               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-               child: _isLoading 
-                   ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                   : const Text('Start Import'),
-             ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildPreviewSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Data Preview",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: AppTheme.glassDecoration(
+            context: context,
+            opacity: 0.2,
+            borderRadius: 24,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+              columns: _previewData[0].map((e) => DataColumn(label: Text(e.toString().toUpperCase()))).toList(),
+              rows: _previewData.skip(1).map((row) {
+                return DataRow(cells: row.map((cell) => DataCell(Text(cell.toString()))).toList());
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusMessage() {
+    final isSuccess = _uploadStatus!.startsWith('Success');
+    final color = isSuccess ? AppTheme.neonEmerald : Colors.redAccent;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(isSuccess ? Icons.check_circle_rounded : Icons.error_rounded, color: color),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              _uploadStatus!,
+              style: TextStyle(fontWeight: FontWeight.bold, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 60,
+          child: ElevatedButton(
+            onPressed: _fullData.isNotEmpty && !_isLoading ? _uploadFile : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 8,
+              shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+            ),
+            child: _isLoading 
+                ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                      SizedBox(width: 16),
+                      Text("PROCESSING...", style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ) 
+                : const Text('INITIATE SYSTEM IMPORT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.0)),
+          ),
+        ),
+        if (!_isLoading && _fullData.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: _isLoading ? null : () => setState(() {
+              _pickedFile = null;
+              _fullData = [];
+              _previewData = [];
+              _uploadStatus = null;
+            }),
+            child: const Text("Clear Selection", style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ],
+    );
+  }
+
   String _getFormatGuide() {
     if (_selectedType == 'students') {
-      return 'Required columns: first_name, last_name, parent_email\nOptional: admission_number (Auto-generated if empty), dob, gender';
+      return '• Columns: first_name, last_name, parent_email\n• Optional: admission_number (Automatic if blank), dob, gender';
     } else {
-      return 'Required columns: name, email, phone';
+      return '• Columns: name, email, phone\n• Optional: address, department';
     }
   }
 }

@@ -28,20 +28,31 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
   bool _isLoadingParents = false;
   bool _isLinking = false;
 
-  Future<void> _searchStudents(String query) async {
-    if (query.length < 2) {
-      setState(() => _students = []);
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
 
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _searchStudents(''),
+      _searchParents(''),
+    ]);
+  }
+
+  Future<void> _searchStudents(String query) async {
     setState(() => _isLoadingStudents = true);
     try {
       final studentService = Provider.of<StudentServiceApi>(context, listen: false);
-      final results = await studentService.getStudents(search: query);
+      final results = await studentService.getStudents(
+        search: query.isEmpty ? null : query,
+        limit: 50,
+      );
       setState(() => _students = results);
     } catch (e) {
       if (mounted) {
-        AppSnackbar.showError(context, message: 'Error searching students: $e');
+        AppSnackbar.showError(context, message: 'Error fetching students: $e');
       }
     } finally {
       setState(() => _isLoadingStudents = false);
@@ -49,25 +60,20 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
   }
 
   Future<void> _searchParents(String query) async {
-    if (query.length < 2) {
-      setState(() => _parents = []);
-      return;
-    }
-
     setState(() => _isLoadingParents = true);
     try {
       final userService = Provider.of<UserServiceApi>(context, listen: false);
-      final results = await userService.getUsers(role: 'parent');
-      // Filter locally for simplicity in this mockup, in real world the API should handle search
+      final results = await userService.getUsers(
+        role: 'parent',
+        search: query.isEmpty ? null : query,
+        limit: 50,
+      );
       setState(() {
-        _parents = results.where((u) => 
-          u['fullName'].toString().toLowerCase().contains(query.toLowerCase()) ||
-          u['email'].toString().toLowerCase().contains(query.toLowerCase())
-        ).toList();
+        _parents = results;
       });
     } catch (e) {
       if (mounted) {
-        AppSnackbar.showError(context, message: 'Error searching parents: $e');
+        AppSnackbar.showError(context, message: 'Error fetching parents: $e');
       }
     } finally {
       setState(() => _isLoadingParents = false);
@@ -167,8 +173,8 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
                         ),
                         if (_selectedStudent != null) 
                           _buildSelectedItemCard(
-                            _selectedStudent!['fullName'],
-                            _selectedStudent!['admissionNumber'] ?? 'N/A',
+                            _getItemName(_selectedStudent!),
+                            _selectedStudent!['admission_number'] ?? _selectedStudent!['admissionNumber'] ?? 'N/A',
                             () => setState(() => _selectedStudent = null),
                             AppTheme.primaryColor,
                           )
@@ -177,7 +183,7 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
                             setState(() {
                               _selectedStudent = item;
                               _students = [];
-                              _studentSearchController.text = item['fullName'];
+                              _studentSearchController.text = _getItemName(item);
                             });
                           }, AppTheme.primaryColor),
                         
@@ -193,8 +199,8 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
                         ),
                         if (_selectedParent != null)
                           _buildSelectedItemCard(
-                            _selectedParent!['fullName'],
-                            _selectedParent!['email'],
+                            _getItemName(_selectedParent!),
+                            _selectedParent!['email'] ?? 'No email',
                             () => setState(() => _selectedParent = null),
                             Colors.orangeAccent,
                           )
@@ -203,7 +209,7 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
                             setState(() {
                               _selectedParent = item;
                               _parents = [];
-                              _parentSearchController.text = item['fullName'];
+                              _parentSearchController.text = _getItemName(item);
                             });
                           }, Colors.orangeAccent),
                       ],
@@ -279,6 +285,10 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
     );
   }
 
+  String _getItemName(Map<String, dynamic> item) {
+    return item['student_name'] ?? item['full_name'] ?? item['fullName'] ?? 'Unknown';
+  }
+
   Widget _buildResultsList(List<Map<String, dynamic>> items, Function(Map<String, dynamic>) onSelect, Color accentColor) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -296,9 +306,12 @@ class _StudentParentLinkingScreenState extends State<StudentParentLinkingScreen>
         separatorBuilder: (_, __) => Divider(color: Colors.grey.withValues(alpha: 0.1)),
         itemBuilder: (context, index) {
           final item = items[index];
+          final name = _getItemName(item);
+          final subtitle = item['email'] ?? item['admission_number'] ?? item['admissionNumber'] ?? 'N/A';
+
           return ListTile(
-            title: Text(item['fullName'], style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-            subtitle: Text(item['email'] ?? item['admissionNumber'] ?? '', style: TextStyle(color: Colors.grey[700], fontSize: 12)),
+            title: Text(name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+            subtitle: Text(subtitle.toString(), style: TextStyle(color: Colors.grey[700], fontSize: 12)),
             trailing: Icon(Icons.add_circle_outline, color: accentColor),
             onTap: () => onSelect(item),
           );

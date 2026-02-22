@@ -19,6 +19,7 @@ import 'fee_detail_screen.dart';
 import 'add_fee_screen.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/responsive_widgets.dart';
 
@@ -242,13 +243,13 @@ class _FeeListScreenState extends State<FeeListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadInitialData,
+            onPressed: _isLoading ? null : _loadInitialData,
           ),
         ],
       ),
-      floatingActionButton: canAddFee && _selectedSectionId != null
+      floatingActionButton: (canAddFee && _selectedSectionId != null)
           ? FloatingActionButton(
-              onPressed: () {
+              onPressed: _isLoading ? null : () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -393,7 +394,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
@@ -418,7 +419,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text('${_fees.length}', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
@@ -427,7 +428,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                         ),
                         const SizedBox(height: 16),
                         if (_isLoading)
-                          const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                          const Padding(padding: EdgeInsets.all(40), child: LoadingIndicator(size: 50))
                         else if (_fees.isEmpty)
                           const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No fees found for selected criteria')))
                         else
@@ -454,7 +455,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                   leading: Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor.withOpacity(0.1),
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),

@@ -73,6 +73,8 @@ class AppSnackbar {
       BuildContext context, {
         required String message,
         Duration duration = const Duration(seconds: 3),
+        String? actionLabel,
+        VoidCallback? onActionPressed,
       }) {
     show(
       context,
@@ -80,6 +82,13 @@ class AppSnackbar {
       duration: duration,
       backgroundColor: AppTheme.successColor,
       textColor: Colors.white,
+      action: actionLabel != null && onActionPressed != null
+          ? SnackBarAction(
+              label: actionLabel,
+              onPressed: onActionPressed,
+              textColor: Colors.white,
+            )
+          : null,
     );
   }
 
@@ -87,6 +96,8 @@ class AppSnackbar {
       BuildContext context, {
         required String message,
         Duration duration = const Duration(seconds: 3),
+        String? actionLabel,
+        VoidCallback? onActionPressed,
       }) {
     show(
       context,
@@ -94,6 +105,13 @@ class AppSnackbar {
       duration: duration,
       backgroundColor: AppTheme.warningColor,
       textColor: Colors.black87,
+      action: actionLabel != null && onActionPressed != null
+          ? SnackBarAction(
+              label: actionLabel,
+              onPressed: onActionPressed,
+              textColor: Colors.black87,
+            )
+          : null,
     );
   }
 }

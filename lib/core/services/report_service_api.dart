@@ -18,7 +18,7 @@ class ReportServiceApi extends ChangeNotifier {
       );
 
       final List<dynamic> data = response['data'] ?? [];
-      return data.cast<Map<String, dynamic>>();
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (e) {
       throw Exception('Error loading annual summary: $e');
     }
@@ -32,7 +32,7 @@ class ReportServiceApi extends ChangeNotifier {
 
       final response = await _apiService.get(ApiConfig.reportPaymentMethods(schoolId));
       final List<dynamic> data = response['data'] ?? [];
-      return data.cast<Map<String, dynamic>>();
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (e) {
       throw Exception('Error loading payment methods: $e');
     }
@@ -66,7 +66,7 @@ class ReportServiceApi extends ChangeNotifier {
       );
 
       final List<dynamic> data = response['data'] ?? [];
-      return data.cast<Map<String, dynamic>>();
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (e) {
       throw Exception('Error loading debtors list: $e');
     }

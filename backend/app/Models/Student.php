@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\GeneratesSchoolIds;
 
@@ -14,7 +15,6 @@ class Student extends Model
 
     protected $fillable = [
         'school_id',
-        'section_id',
         'class_id',
         'parent_id',
         'student_name',
@@ -51,11 +51,12 @@ class Student extends Model
     }
 
     /**
-     * Get the section that owns the student.
+     * The sections that belong to the student.
      */
-    public function section(): BelongsTo
+    public function sections(): BelongsToMany
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsToMany(Section::class, 'section_student')
+            ->withTimestamps();
     }
 
     /**

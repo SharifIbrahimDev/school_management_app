@@ -183,9 +183,9 @@ class _ParentReportScreenState extends State<ParentReportScreen> {
                                       margin: const EdgeInsets.only(bottom: 8),
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.surface.withOpacity(0.5),
+                                        color: theme.colorScheme.surface.withValues(alpha: 0.5),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+                                        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
                                       ),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

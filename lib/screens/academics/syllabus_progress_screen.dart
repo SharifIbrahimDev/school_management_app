@@ -234,7 +234,7 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppTheme.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -245,7 +245,7 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Curriculum Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text('$completed / ${_syllabusTopics.length} Topics Completed', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                  Text('$completed / ${_syllabusTopics.length} Topics Completed', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
                 ],
               ),
               Text('${(progress * 100).toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
@@ -256,7 +256,7 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 10,
             ),
@@ -272,7 +272,7 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_stories_rounded, size: 64, color: Colors.grey.withOpacity(0.5)),
+            Icon(Icons.auto_stories_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             const Text('No syllabus topics found for this selection.', style: TextStyle(color: Colors.grey)),
           ],
@@ -292,7 +292,7 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
           decoration: AppTheme.glassDecoration(context: context, opacity: 0.1),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isCompleted ? Colors.green.withOpacity(0.1) : theme.dividerColor.withOpacity(0.1),
+              backgroundColor: isCompleted ? Colors.green.withValues(alpha: 0.1) : theme.dividerColor.withValues(alpha: 0.1),
               child: Icon(
                 isCompleted ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
                 color: isCompleted ? Colors.green : Colors.grey,

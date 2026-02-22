@@ -8,6 +8,8 @@ import '../core/services/section_service_api.dart';
 import '../core/services/transaction_service_api.dart';
 import '../screens/student/student_detail_screen.dart';
 import '../screens/sections/section_detail_screen.dart';
+import '../../core/utils/formatters.dart';
+import '../../core/utils/app_theme.dart';
 import '../screens/transactions/transaction_detail_screen.dart';
 
 /// Global search delegate for searching across the app
@@ -266,7 +268,7 @@ class _SearchResultsState extends State<_SearchResults> with SingleTickerProvide
           title: Text(transaction.category),
           subtitle: Text(transaction.description ?? 'No description'),
           trailing: Text(
-            '₦${transaction.amount.toStringAsFixed(2)}',
+            Formatters.formatCurrency(transaction.amount),
             style: TextStyle(
               color: isCredit ? Colors.green : Colors.red,
               fontWeight: FontWeight.bold,

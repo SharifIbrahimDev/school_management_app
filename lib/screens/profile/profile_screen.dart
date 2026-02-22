@@ -12,6 +12,7 @@ import '../../core/utils/responsive_utils.dart';
 import '../../widgets/responsive_widgets.dart';
 import 'update_password_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,101 +22,184 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoading = false;
   UserModel? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadUser(refresh: true);
   }
 
-  void _loadUser() {
+  Future<void> _loadUser({bool refresh = false}) async {
     final authService = Provider.of<AuthServiceApi>(context, listen: false);
+    
+    // Initial load from cache/provider
     final userMap = authService.currentUser;
     if (userMap != null) {
-      setState(() {
-        _currentUser = UserModel.fromMap(userMap);
-      });
+      if (mounted) {
+        setState(() {
+          _currentUser = UserModel.fromMap(userMap);
+        });
+      }
+    }
+
+    if (refresh) {
+      setState(() => _isLoading = true);
+      try {
+        await authService.refreshUser();
+        final updatedUserMap = authService.currentUser;
+        if (updatedUserMap != null && mounted) {
+          setState(() {
+            _currentUser = UserModel.fromMap(updatedUserMap);
+          });
+        }
+      } catch (e) {
+        debugPrint('Error refreshing user profile: $e');
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) {
-      return Scaffold(
-        appBar: const CustomAppBar(title: 'Profile'),
-        body: const Center(child: Text('Please log in to view your profile')),
-      );
-    }
+    return Consumer<AuthServiceApi>(
+      builder: (context, authService, child) {
+        final user = authService.currentUserModel;
 
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Profile',
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: AppTheme.constrainedContent(
-            context: context,
-            child: SingleChildScrollView(
-              padding: AppTheme.responsivePadding(context),
-              child: ResponsiveRowColumn(
-                rowOnMobile: false,
-                rowOnTablet: true,
-                rowOnDesktop: true,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        if (user == null && _isLoading) {
+          return const Scaffold(
+            appBar: CustomAppBar(title: 'Profile'),
+            body: Center(child: LoadingIndicator(size: 50)),
+          );
+        }
+
+        if (user == null) {
+          return Scaffold(
+            appBar: const CustomAppBar(title: 'Profile'),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Profile Header Sidebar
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      children: [
-                        _buildHeader(context, _currentUser!),
-                        if (!context.isMobile) ...[
-                          const SizedBox(height: 24),
-                          _buildActionButtons(context, _currentUser!),
-                        ],
-                      ],
-                    ),
-                  ),
-                  
-                  if (!context.isMobile) const SizedBox(width: 32),
-  
-                  // Profile Details
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      children: [
-                        _buildProfileCard(context, _currentUser!),
-                        if (context.isMobile) ...[
-                          const SizedBox(height: 16),
-                          _buildActionButtons(context, _currentUser!),
-                        ],
-                      ],
-                    ),
+                  const Text('Failed to load profile data'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _loadUser(refresh: true),
+                    child: const Text('Try Again'),
                   ),
                 ],
               ),
             ),
+          );
+        }
+
+        return Scaffold(
+          appBar: const CustomAppBar(
+            title: 'Profile',
           ),
-        ),
-      ),
+          body: RefreshIndicator(
+            onRefresh: () => _loadUser(refresh: true),
+            child: Container(
+              height: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/auth_bg_pattern.png'),
+                  fit: BoxFit.cover,
+                  opacity: 0.05,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primaryColor.withValues(alpha: 0.1),
+                    AppTheme.accentColor.withValues(alpha: 0.2),
+                    Colors.white,
+                  ],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                child: AppTheme.constrainedContent(
+                  context: context,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: AppTheme.responsivePadding(context),
+                    child: Column(
+                      children: [
+                        if (_isLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 16),
+                            child: LinearProgressIndicator(minHeight: 2),
+                          ),
+                        ResponsiveRowColumn(
+                          rowOnMobile: false,
+                          rowOnTablet: true,
+                          rowOnDesktop: true,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Profile Header Sidebar
+                            if (!context.isMobile)
+                              Expanded(
+                                flex: 1,
+                                child: Column(
+                                  children: [
+                                    _buildHeader(context, user),
+                                    if (!context.isMobile) ...[
+                                      const SizedBox(height: 24),
+                                      _buildActionButtons(context, user),
+                                    ],
+                                  ],
+                                ),
+                              )
+                            else
+                              Column(
+                                children: [
+                                  _buildHeader(context, user),
+                                  if (!context.isMobile) ...[
+                                    const SizedBox(height: 24),
+                                    _buildActionButtons(context, user),
+                                  ],
+                                ],
+                              ),
+
+                            if (!context.isMobile) const SizedBox(width: 32),
+
+                            // Profile Details
+                            if (!context.isMobile)
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  children: [
+                                    _buildProfileCard(context, user),
+                                    if (context.isMobile) ...[
+                                      const SizedBox(height: 16),
+                                      _buildActionButtons(context, user),
+                                    ],
+                                  ],
+                                ),
+                              )
+                            else
+                              Column(
+                                children: [
+                                  _buildProfileCard(context, user),
+                                  if (context.isMobile) ...[
+                                    const SizedBox(height: 16),
+                                    _buildActionButtons(context, user),
+                                  ],
+                                ],
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -141,8 +225,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: CircleAvatar(
               radius: 50,
               backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-              child: const Icon(
-                Icons.person_rounded,
+              child: Icon(
+                _getRoleIcon(user.role),
                 size: 60,
                 color: AppTheme.primaryColor,
               ),
@@ -262,6 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: CustomButton(
                   text: 'Edit Profile',
+                  isLoading: _isLoading,
                   backgroundColor: AppTheme.primaryColor,
                   onPressed: () {
                     Navigator.push(
@@ -277,6 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: CustomButton(
                   text: 'Change Password',
+                  isLoading: _isLoading,
                   backgroundColor: Colors.orange,
                   onPressed: () {
                      Navigator.push(
@@ -293,6 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           CustomButton(
             text: 'Sign Out',
+            isLoading: _isLoading,
             onPressed: () => _showLogoutConfirmationDialog(context),
             backgroundColor: Colors.red,
           ),

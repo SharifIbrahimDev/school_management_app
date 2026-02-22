@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
@@ -142,7 +143,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       labelText: 'Phone Number',
                       prefixIcon: Icons.phone,
                       keyboardType: TextInputType.phone,
-                      maxLength: 11,
                       validator: (value) => Validators.validatePhoneNumber(value),
                     ),
                     const SizedBox(height: 16),

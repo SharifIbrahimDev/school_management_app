@@ -93,4 +93,32 @@ class ExamServiceApi extends ChangeNotifier {
       throw Exception('Error loading academic analytics: $e');
     }
   }
+
+  /// Get recent results for a student
+  Future<List<Map<String, dynamic>>> getStudentRecentResults(int studentId, {int limit = 3}) async {
+    try {
+      final schoolId = await StorageHelper.getSchoolId();
+      if (schoolId == null) throw Exception('School ID not found');
+
+      // Re-using the academic report card endpoint but could be a more specific one
+      final response = await _apiService.get(
+        ApiConfig.reportAcademicCard(schoolId, studentId),
+      );
+
+      final data = response['data'] as Map<String, dynamic>? ?? {};
+      final results = List<dynamic>.from(data['results'] ?? []);
+      
+      // Sort by date descending and take limit
+      results.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(2000);
+        final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(2000);
+        return dateB.compareTo(dateA);
+      });
+
+      return results.take(limit).map((res) => res as Map<String, dynamic>).toList();
+    } catch (e) {
+      debugPrint('Error loading recent results: $e');
+      return [];
+    }
+  }
 }

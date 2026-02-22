@@ -78,6 +78,25 @@ class ErrorDisplayWidget extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             
+            // Helpful debug trace for developers
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: theme.dividerColor),
+              ),
+              child: SelectableText(
+                error,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: theme.colorScheme.error,
+                ),
+                textAlign: TextAlign.left,
+              ),
+            ),
+            
             const SizedBox(height: 32),
             
             // Action buttons

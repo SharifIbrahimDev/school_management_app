@@ -201,7 +201,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
                             context: context,
                             opacity: 0.8,
                             borderRadius: 16,
-                            borderColor: theme.dividerColor.withOpacity(0.1),
+                            borderColor: theme.dividerColor.withValues(alpha: 0.1),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -289,14 +289,14 @@ class _ClassListScreenState extends State<ClassListScreen> {
             opacity: 0.7,
             borderRadius: 16,
             hasGlow: true,
-            borderColor: theme.dividerColor.withOpacity(0.1),
+            borderColor: theme.dividerColor.withValues(alpha: 0.1),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.all(16),
             leading: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.class_rounded, color: theme.colorScheme.primary),

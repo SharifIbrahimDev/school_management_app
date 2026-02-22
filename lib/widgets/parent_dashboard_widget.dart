@@ -9,12 +9,15 @@ import '../core/services/session_service_api.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/app_theme.dart';
 import '../core/utils/responsive_utils.dart';
-import 'loading_indicator.dart';
 import '../screens/fees/parent_fee_screen.dart';
 import 'analytics_charts.dart';
 import '../core/services/attendance_service_api.dart';
+import '../core/services/exam_service_api.dart';
 import 'responsive_widgets.dart';
-
+import '../core/services/auth_service_api.dart';
+import 'error_display_widget.dart';
+import 'empty_state_widget.dart';
+import 'skeleton_loader.dart';
 
 class ParentDashboardWidget extends StatefulWidget {
   final String parentId;
@@ -35,8 +38,8 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
   List<StudentModel> _students = [];
   List<SectionModel> _sections = [];
 
-
   Map<int, Map<String, dynamic>> _studentStats = {};
+  Map<int, List<Map<String, dynamic>>> _studentResults = {};
   Map<String, double> _studentBalances = {};
   double _totalGlobalOutstanding = 0.0;
   bool _isLoading = true;
@@ -103,11 +106,14 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
         }
       }
 
+      if (!mounted) return;
+
       // Fetch stats for all students
       final attendanceService = Provider.of<AttendanceServiceApi>(context, listen: false);
+      final examService = Provider.of<ExamServiceApi>(context, listen: false);
 
-      
       _studentStats = {}; // Reset
+      _studentResults = {};
       
       double globalTotal = 0.0;
       Map<String, double> balances = {};
@@ -125,14 +131,19 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
               debugPrint('Error loading stats for student $sId: $e');
             }
 
-            // 2. Fetch Fees and calculate balance
+            // 2. Fetch Recent Results
+            try {
+              final results = await examService.getStudentRecentResults(sId);
+              _studentResults[sId] = results;
+            } catch (e) {
+              debugPrint('Error loading results for student $sId: $e');
+            }
+
+            // 3. Fetch Fees and calculate balance
             try {
                final fees = await feeService.getFees(studentId: sId);
                double studentTotal = 0.0;
                for (var fee in fees) {
-                  // Assuming fee object has 'balance' or we calculate it. 
-                  // If API returns 'balance', use it. Else 'amount'.
-                  // Checking 'balance' existence.
                   final balance = (fee['balance'] ?? fee['amount'] ?? 0).toDouble();
                   if (balance > 0) studentTotal += balance;
                }
@@ -154,7 +165,7 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Error loading data: $e';
+          _errorMessage = e.toString();
         });
       }
     }
@@ -162,36 +173,25 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (_isLoading) {
-      return const LoadingIndicator(message: 'Loading students...');
+      return _buildLoadingState();
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadData,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return ErrorDisplayWidget(
+        error: _errorMessage!,
+        onRetry: _loadData,
       );
     }
 
     if (_students.isEmpty) {
-      return const Center(
-        child: Text('No students found. Please contact school admin.'),
+      return EmptyStateWidget(
+        icon: Icons.family_restroom_rounded,
+        title: 'No Children Linked',
+        message: 'No student records are linked to your account. Please contact the school office to link your children.',
+        onActionPressed: _loadData,
+        actionButtonText: 'Refresh',
       );
-    }
-
-    if (_sections.isEmpty) {
-      return const Center(child: Text('No sections found'));
     }
 
     return RefreshIndicator(
@@ -203,9 +203,12 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildWelcomeHeader(),
+              const SizedBox(height: 32),
+              
               Text(
-                "Parental Overview",
-                style: theme.textTheme.titleLarge?.copyWith(
+                "Quick Overview",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.5,
                 ),
@@ -220,16 +223,22 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                     children: _sections.map((section) {
                       final isSelected = selectedSection?.id == section.id;
                       return Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.only(right: 12),
                         child: ChoiceChip(
                           label: Text(section.sectionName),
                           selected: isSelected,
                           onSelected: (selected) {
                             if (selected) {
                               setState(() => selectedSection = section);
-                              _loadData();
+                              // We don't necessarily need to reload everything if we have the data
                             }
                           },
+                          selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                          labelStyle: TextStyle(
+                            color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondaryColor,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       );
                     }).toList(),
@@ -253,27 +262,29 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                         if (selectedSection != null) ...[
                           Text(
                             "Your Children", 
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)
                           ),
                           const SizedBox(height: 12),
                           ResponsiveGridView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
                             mobileColumns: 1,
-                            tabletColumns: 2,
-                            desktopColumns: 3,
-                            runSpacing: 12,
-                            spacing: 12,
-                            childAspectRatio: 1.8,
+                            tabletColumns: 1,
+                            desktopColumns: 2,
+                            runSpacing: 16,
+                            spacing: 16,
+                            childAspectRatio: 2.2,
                             children: _students
                                 .where((s) => s.sectionIds.contains(selectedSection!.id))
                                 .map((student) => _buildStudentCard(student))
                                 .toList(),
                           ),
-                          const SizedBox(height: 32),
                         ],
                       ],
                     ),
                   ),
                   if (!context.isMobile) const SizedBox(width: 24),
+                  if (context.isMobile) const SizedBox(height: 24),
                   Expanded(
                     flex: 2,
                     child: _buildFeesOverview(context),
@@ -281,109 +292,356 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                 ],
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
-              // Attendance & Performance Section (Dynamic)
-              if (selectedSection != null)
-                ResponsiveGridView(
-                  mobileColumns: 1,
-                  tabletColumns: 1,
-                  desktopColumns: 2,
-                  runSpacing: 24,
-                  spacing: 24,
-                  childAspectRatio: context.isDesktop ? 2.5 : 2.0,
-                  children: _students
-                      .where((s) => s.sectionIds.contains(selectedSection!.id))
-                      .map((student) {
-                    final sId = int.tryParse(student.id) ?? 0;
-                    final stats = _studentStats[sId] ?? {'attendance': 0.0};
-                    final attendance = (stats['attendance'] as double);
+                const SizedBox(height: 32),
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Attendance: ${student.fullName}', 
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)
+                // Attendance Section
+                if (selectedSection != null) ...[
+                  Text(
+                    "Attendance Tracking",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ResponsiveGridView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mobileColumns: 1,
+                    tabletColumns: 2,
+                    desktopColumns: 3,
+                    runSpacing: 24,
+                    spacing: 24,
+                    childAspectRatio: 1.2,
+                    children: _students
+                        .where((s) => s.sectionIds.contains(selectedSection!.id))
+                        .map((student) {
+                      final sId = int.tryParse(student.id) ?? 0;
+                      final stats = _studentStats[sId] ?? {'attendance': 0.0};
+                      final attendance = (stats['attendance'] as double);
+
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: AppTheme.glassDecoration(
+                          context: context,
+                          opacity: 0.1,
+                          borderRadius: 28,
                         ),
-                        const SizedBox(height: 12),
-                        AttendanceCircleChart(
-                          percentage: attendance,
-                          label: 'Term Attendance',
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              student.fullName, 
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 20),
+                            AttendanceCircleChart(
+                              percentage: attendance,
+                              label: 'Attendance',
+                            ),
+                          ],
                         ),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              const SizedBox(height: 80),
-            ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+
+                const SizedBox(height: 32),
+
+                // Academic Progress Section
+                if (selectedSection != null) ...[
+                  Text(
+                    "Academic Progress",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Column(
+                    children: _students
+                        .where((s) => s.sectionIds.contains(selectedSection!.id))
+                        .map((student) {
+                      final sId = int.tryParse(student.id) ?? 0;
+                      final results = _studentResults[sId] ?? [];
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.all(24),
+                        decoration: AppTheme.glassDecoration(
+                          context: context,
+                          opacity: 0.1,
+                          borderRadius: 28,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: AppTheme.neonPink.withValues(alpha: 0.1),
+                                  child: Text(
+                                    student.fullName[0],
+                                    style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  student.fullName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            if (results.isEmpty)
+                              Center(
+                                child: Text(
+                                  "No recent exam results found",
+                                  style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
+                                ),
+                              )
+                            else
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: results.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  final res = results[index];
+                                  final subject = res['exam']?['subject']?['subject_name'] ?? 'Unknown Subject';
+                                  final score = (res['score'] as num?)?.toDouble() ?? 0.0;
+                                  final grade = res['grade'] ?? '-';
+                                  
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(subject, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                            Text(
+                                              res['exam']?['exam_name'] ?? 'Exam',
+                                              style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.neonPink.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          "$score / $grade",
+                                          style: const TextStyle(
+                                            color: AppTheme.neonPink,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
+      );
+  }
+
+  Widget _buildLoadingState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const CardSkeletonLoader(),
+          const SizedBox(height: 32),
+          const CardSkeletonLoader(),
+          const SizedBox(height: 32),
+          ResponsiveGridView(
+            mobileColumns: 1,
+            tabletColumns: 2,
+            desktopColumns: 3,
+            runSpacing: 24,
+            spacing: 24,
+            childAspectRatio: 1.3,
+            children: const [
+              DashboardCardSkeletonLoader(),
+              DashboardCardSkeletonLoader(),
+              DashboardCardSkeletonLoader(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeHeader() {
+    final authService = Provider.of<AuthServiceApi>(context, listen: false);
+    final user = authService.currentUserModel;
+    final name = user?.fullName.split(' ').first ?? 'Parent';
+
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.8,
+        borderRadius: 32,
+        hasGlow: true,
+      ).copyWith(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.neonPurple.withValues(alpha: 0.1),
+            AppTheme.neonBlue.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.neonPurple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.family_restroom_rounded, color: AppTheme.neonPurple, size: 32),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Hello,",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_totalGlobalOutstanding > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppTheme.errorColor, size: 16),
+                  const SizedBox(width: 4),
+                  const Text(
+                    "Fees Due",
+                    style: TextStyle(color: AppTheme.errorColor, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildStudentCard(StudentModel student) {
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: AppTheme.glassDecoration(
         context: context,
-        opacity: 0.6,
+        opacity: 0.1,
         borderRadius: 24,
-        hasGlow: true,
-        borderColor: AppTheme.neonBlue.withOpacity(0.3),
+        borderColor: AppTheme.neonBlue.withValues(alpha: 0.2),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              radius: 24,
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-              child: Text(
-                student.fullName[0],
-                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-              ),
-            ),
-            title: Text(
-              student.fullName,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              student.prettyId ?? 'ID: ${student.id}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: AppTheme.neonBlue.withValues(alpha: 0.1),
+            child: Text(
+              student.fullName[0].toUpperCase(),
+              style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 24),
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _ActionButton(
-                  icon: Icons.receipt_long_rounded,
-                  label: 'Fees',
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ParentFeeScreen(
-                          studentId: int.parse(student.id),
-                          studentName: student.fullName,
-                        ),
-                      ),
-                    );
-                  },
+                Text(
+                  student.fullName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                _ActionButton(
-                  icon: Icons.calendar_today_rounded,
-                  label: 'Attendance',
-                  color: AppTheme.neonEmerald,
-                  onTap: () {
-                    // Action for attendance
-                  },
+                const SizedBox(height: 4),
+                Text(
+                  student.prettyId ?? 'ID: ${student.id}',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _SmallActionButton(
+                      icon: Icons.receipt_long_rounded,
+                      color: Colors.orange,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ParentFeeScreen(
+                              studentId: int.parse(student.id),
+                              studentName: student.fullName,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _SmallActionButton(
+                      icon: Icons.calendar_today_rounded,
+                      color: AppTheme.neonEmerald,
+                      onTap: () {
+                        // Action for attendance
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _SmallActionButton(
+                      icon: Icons.bar_chart_rounded,
+                      color: AppTheme.neonPink,
+                      onTap: () {
+                        // Action for performance
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -394,22 +652,21 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
   }
 
   Widget _buildFeesOverview(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Fees Overview", 
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)
         ),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: AppTheme.glassDecoration(
             context: context, 
-            opacity: 0.05,
-            borderRadius: 24,
+            opacity: 0.1,
+            borderRadius: 28,
             borderColor: AppTheme.neonPurple.withValues(alpha: 0.3),
             hasGlow: true,
           ).copyWith(
@@ -426,7 +683,6 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,7 +690,7 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                       Text(
                         "Total Outstanding", 
                         style: TextStyle(
-                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                          color: AppTheme.textSecondaryColor,
                           fontWeight: FontWeight.w500,
                           fontSize: 13
                         )
@@ -443,7 +699,7 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                       Text(
                         Formatters.formatCurrency(_totalGlobalOutstanding),
                         style: TextStyle(
-                          fontSize: 28, // Slightly smaller for better fit
+                          fontSize: 32,
                           fontWeight: FontWeight.bold, 
                           color: _totalGlobalOutstanding > 0 ? AppTheme.errorColor : AppTheme.neonEmerald,
                           letterSpacing: -1.0,
@@ -457,15 +713,15 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                       color: AppTheme.neonPurple.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.receipt_long_rounded, color: AppTheme.neonPurple, size: 28),
+                    child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.neonPurple, size: 28),
                   )
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               const Divider(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               ...(_studentBalances.entries.isEmpty 
-                  ? [const Text("No fee data available", style: TextStyle(fontSize: 12, color: Colors.grey))]
+                  ? [Text("No fee records found", style: TextStyle(fontSize: 13, color: AppTheme.textSecondaryColor))]
                   : _studentBalances.entries.map((entry) {
                 final student = _students.firstWhere(
                   (s) => s.id == entry.key, 
@@ -479,20 +735,32 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                   )
                 );
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text(student.fullName, style: const TextStyle(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-                      Text(Formatters.formatCurrency(entry.value), style: TextStyle(fontWeight: FontWeight.bold, color: entry.value > 0 ? Colors.redAccent : Colors.green)),
+                      Expanded(
+                        child: Text(
+                          student.fullName, 
+                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                          overflow: TextOverflow.ellipsis
+                        )
+                      ),
+                      Text(
+                        Formatters.formatCurrency(entry.value), 
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 13,
+                          color: entry.value > 0 ? AppTheme.errorColor : AppTheme.neonEmerald
+                        )
+                      ),
                     ],
                   ),
                 );
               })),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: () {
                     if (_students.isNotEmpty) {
                       Navigator.push(
@@ -506,7 +774,14 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                       );
                     }
                   },
-                  child: const Text("View Details & Pay"),
+                  icon: const Icon(Icons.payment_rounded),
+                  label: const Text("Make Payment"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
               )
             ],
@@ -517,15 +792,13 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+class _SmallActionButton extends StatelessWidget {
   final IconData icon;
-  final String label;
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionButton({
+  const _SmallActionButton({
     required this.icon,
-    required this.label,
     required this.color,
     required this.onTap,
   });
@@ -534,25 +807,16 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 20, color: color),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-          ),
-        ],
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 20, color: color),
       ),
     );
   }
 }
+

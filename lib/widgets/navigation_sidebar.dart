@@ -170,6 +170,7 @@ class NavigationSidebar extends StatelessWidget {
           _NavItem(Icons.class_rounded, 'Classes'),
           _NavItem(Icons.people_alt_rounded, 'Users'),
           _NavItem(Icons.analytics_rounded, 'Reports'),
+          _NavItem(Icons.settings_suggest_rounded, 'Settings'),
         ]);
         break;
       case UserRole.principal:

@@ -3,6 +3,7 @@ import '../../core/utils/app_theme.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/teacher_dashboard_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_drawer.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   final String teacherId;
@@ -46,6 +47,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           ),
         ],
       ),
+      drawer: const CustomDrawer(),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(

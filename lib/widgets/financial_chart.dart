@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../core/utils/formatters.dart';
 
 /// A professional bar chart widget for displaying financial data
 class FinancialBarChart extends StatelessWidget {
@@ -62,7 +63,7 @@ class FinancialBarChart extends StatelessWidget {
                           ),
                           children: [
                             TextSpan(
-                              text: '₦${NumberFormat('#,##0.00').format(rod.toY)}',
+                              text: Formatters.formatCurrency(rod.toY),
                               style: TextStyle(
                                 color: theme.textTheme.bodyMedium?.color,
                                 fontSize: 11,

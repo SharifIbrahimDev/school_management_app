@@ -7,7 +7,6 @@ import '../../core/utils/app_theme.dart';
 import '../../core/services/exam_service_api.dart';
 import '../../core/services/student_service_api.dart';
 import '../../widgets/app_snackbar.dart';
-
 import '../../widgets/custom_app_bar.dart';
 
 class BulkResultUploadScreen extends StatefulWidget {
@@ -96,9 +95,7 @@ class _BulkResultUploadScreenState extends State<BulkResultUploadScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      // Assume CSV format: Admission Number, Score
-      // Skip header row if present
-      final dataRows = _csvData!.length > 1 && _csvData![0].contains('Admission') 
+      final dataRows = _csvData!.length > 1 && _csvData![0].any((e) => e.toString().toLowerCase().contains('admission')) 
           ? _csvData!.sublist(1) 
           : _csvData!;
 
@@ -107,9 +104,8 @@ class _BulkResultUploadScreenState extends State<BulkResultUploadScreen> {
           final admissionNumber = row[0].toString().trim();
           final score = row[1].toString().trim();
 
-          // Find matching student
           final student = _students.firstWhere(
-            (s) => s['admission_number']?.toString().trim() == admissionNumber,
+            (s) => s['admission_number']?.toString().trim().toLowerCase() == admissionNumber.toLowerCase(),
             orElse: () => {},
           );
 
@@ -144,7 +140,6 @@ class _BulkResultUploadScreenState extends State<BulkResultUploadScreen> {
     try {
       final examService = Provider.of<ExamServiceApi>(context, listen: false);
       
-      // Prepare payload
       final List<Map<String, dynamic>> payload = [];
       for (final entry in _scoreMapping.entries) {
         payload.add({
@@ -169,63 +164,36 @@ class _BulkResultUploadScreenState extends State<BulkResultUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Bulk Upload Results',
-      ),
+      appBar: const CustomAppBar(title: 'High-Scale Result Migration'),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.05),
-              AppTheme.accentColor.withValues(alpha: 0.1),
-              Colors.white,
-            ],
+          image: DecorationImage(
+            image: const AssetImage('assets/images/auth_bg_pattern.png'),
+            fit: BoxFit.cover,
+            opacity: 0.05,
           ),
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        widget.examTitle,
-                        style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Upload exam results via CSV file',
-                        style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-                      ),
+                      _buildHeader(),
                       const SizedBox(height: 32),
-                      _buildInstructions(),
+                      _buildInstructionsCard(),
                       const SizedBox(height: 24),
-                      _buildFilePickerSection(),
-                      if (_csvData != null) ...[
-                        const SizedBox(height: 24),
-                        _buildMappingPreview(),
+                      _buildFileZone(),
+                      if (_scoreMapping.isNotEmpty) ...[
+                        const SizedBox(height: 32),
+                        _buildMappingList(),
+                        const SizedBox(height: 40),
+                        _buildSubmitButton(),
                       ],
-                      const SizedBox(height: 32),
-                      if (_scoreMapping.isNotEmpty)
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _submitResults,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text('Submit Results', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        ),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
@@ -234,121 +202,172 @@ class _BulkResultUploadScreenState extends State<BulkResultUploadScreen> {
     );
   }
 
-  Widget _buildInstructions() {
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.neonBlue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            "AUTOMATED GRADING",
+            style: TextStyle(color: AppTheme.neonBlue, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          widget.examTitle,
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -1.0),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInstructionsCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppTheme.glassDecoration(context: context, opacity: 0.1, borderRadius: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.1,
+        borderRadius: 24,
+        borderColor: AppTheme.neonBlue.withValues(alpha: 0.2),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 8),
-              Text('CSV Format Instructions', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+              const Icon(Icons.description_rounded, color: AppTheme.neonBlue, size: 20),
+              const SizedBox(width: 12),
+              const Text('Template Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Your CSV file should have two columns:\n'
-            '1. Admission Number\n'
-            '2. Score\n\n'
-            'Example:\n'
-            'Admission Number, Score\n'
-            'BHS-STU-001, 85\n'
-            'BHS-STU-002, 92',
-            style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilePickerSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: AppTheme.glassDecoration(context: context, opacity: 0.1, borderRadius: 16),
-      child: Column(
-        children: [
-          Icon(Icons.upload_file_rounded, size: 48, color: AppTheme.primaryColor.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
-          if (_fileName != null) ...[
-            Text(_fileName!, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('${_scoreMapping.length} results mapped', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-            const SizedBox(height: 16),
-          ],
-          ElevatedButton.icon(
-            onPressed: _isProcessing ? null : _pickFile,
-            icon: const Icon(Icons.folder_open),
-            label: Text(_fileName == null ? 'Select CSV File' : 'Change File'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
+          _buildInstructionPoint("Format: Standard CSV only"),
+          _buildInstructionPoint("Col 1: Student Admission ID"),
+          _buildInstructionPoint("Col 2: Numerical Raw Score"),
         ],
       ),
     );
   }
 
-  Widget _buildMappingPreview() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppTheme.glassDecoration(context: context, opacity: 0.1, borderRadius: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInstructionPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
         children: [
-          Text('Mapped Results Preview', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-          const SizedBox(height: 12),
-          if (_scoreMapping.isEmpty)
-            Text('No results mapped. Check CSV format.', style: TextStyle(color: Colors.red[700]))
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _scoreMapping.length > 5 ? 5 : _scoreMapping.length,
-              itemBuilder: (context, index) {
-                final studentId = _scoreMapping.keys.elementAt(index);
-                final score = _scoreMapping[studentId];
-                final student = _students.firstWhere((s) => s['id'] == studentId, orElse: () => {});
-                
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
+          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppTheme.neonBlue, shape: BoxShape.circle)),
+          const SizedBox(width: 12),
+          Text(text, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFileZone() {
+    final hasFile = _fileName != null;
+    final color = hasFile ? AppTheme.neonEmerald : AppTheme.primaryColor;
+
+    return InkWell(
+      onTap: _isProcessing ? null : _pickFile,
+      borderRadius: BorderRadius.circular(28),
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: AppTheme.glassDecoration(
+          context: context,
+          opacity: 0.05,
+          borderRadius: 28,
+          borderColor: color.withValues(alpha: 0.3),
+        ),
+        child: Column(
+          children: [
+            Icon(hasFile ? Icons.task_rounded : Icons.file_upload_outlined, size: 54, color: color),
+            const SizedBox(height: 20),
+            Text(
+              hasFile ? _fileName! : 'Select Migration File',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (hasFile) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${_scoreMapping.length} records identified',
+                style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMappingList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Mapping Preview", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        const SizedBox(height: 16),
+        ..._scoreMapping.entries.take(5).map((entry) {
+          final student = _students.firstWhere((s) => s['id'] == entry.key, orElse: () => {});
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: AppTheme.glassDecoration(context: context, opacity: 0.1, borderRadius: 16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  child: Text(student['student_name']?[0] ?? '?', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          student['student_name'] ?? student['name'] ?? 'Unknown',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                      Text(
-                        student['admission_number'] ?? '-',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(score ?? '0', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ),
+                      Text(student['student_name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(student['admission_number'] ?? '-', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
                     ],
                   ),
-                );
-              },
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: AppTheme.neonEmerald.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                  child: Text(entry.value, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.neonEmerald)),
+                ),
+              ],
             ),
-          if (_scoreMapping.length > 5)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text('... and ${_scoreMapping.length - 5} more', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            ),
-        ],
+          );
+        }),
+        if (_scoreMapping.length > 5)
+           Center(
+             child: Padding(
+               padding: const EdgeInsets.only(top: 8),
+               child: Text("+ ${_scoreMapping.length - 5} more records identified", style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+             ),
+           ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      height: 60,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _submitResults,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.neonEmerald,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 6,
+          shadowColor: AppTheme.neonEmerald.withValues(alpha: 0.3),
+        ),
+        child: const Text('PROCEED WITH IMPORT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0)),
       ),
     );
   }

@@ -25,7 +25,7 @@ class PaymentSuccessScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.green.withOpacity(0.05),
+              Colors.green.withValues(alpha: 0.05),
               Colors.white,
             ],
           ),
@@ -50,7 +50,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -89,7 +89,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   context: context,
                   opacity: 0.05,
                   borderRadius: 24,
-                  borderColor: theme.dividerColor.withOpacity(0.1),
+                  borderColor: theme.dividerColor.withValues(alpha: 0.1),
                 ),
                 child: Column(
                   children: [

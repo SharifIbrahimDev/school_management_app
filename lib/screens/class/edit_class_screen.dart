@@ -55,11 +55,9 @@ class _EditClassScreenState extends State<EditClassScreen> {
       final classService = Provider.of<ClassServiceApi>(context, listen: false);
       await classService.updateClass(
         int.parse(widget.classModel.id),
-        {
-          'class_name': _nameController.text.trim(),
-          'capacity': int.tryParse(_capacityController.text.trim()),
-          'form_teacher_id': int.tryParse(_teacherIdController.text.trim()),
-        },
+        className: _nameController.text.trim(),
+        capacity: int.tryParse(_capacityController.text.trim()),
+        formTeacherId: int.tryParse(_teacherIdController.text.trim()),
       );
       
       if (mounted) {

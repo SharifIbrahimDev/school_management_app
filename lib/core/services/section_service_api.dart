@@ -25,7 +25,7 @@ class SectionServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final sections = data['data'] as List;
-        return sections.cast<Map<String, dynamic>>();
+        return sections.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

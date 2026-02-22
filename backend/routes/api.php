@@ -56,8 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Schools routes
-    Route::apiResource('schools', SchoolController::class);
     Route::get('schools/banks', [SchoolController::class, 'getBanks']);
+    Route::get('schools/resolve-bank', [SchoolController::class, 'resolveBank']);
+    Route::apiResource('schools', SchoolController::class);
     Route::get('schools/{school}/statistics', [SchoolController::class, 'statistics']);
     Route::post('schools/{school}/setup-subaccount', [SchoolController::class, 'setupSubaccount']);
 
@@ -168,6 +169,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/fees', [ImportController::class, 'importFees']);
         Route::post('/map-parents', [ImportController::class, 'mapParents']);
         Route::post('/assign-teachers', [ImportController::class, 'assignTeachers']);
+        Route::post('/super-sections', [ImportController::class, 'superSectionImport']);
+        Route::post('/ultimate-students', [ImportController::class, 'ultimateStudentImport']);
     });
     
     Route::apiResource('timetables', TimetableController::class);

@@ -5,6 +5,7 @@ import '../../core/services/auth_service_api.dart';
 import '../../widgets/parent_dashboard_widget.dart';
 import '../../widgets/notification_badge.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_drawer.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   final String parentId;
@@ -48,6 +49,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           ),
         ],
       ),
+      drawer: const CustomDrawer(),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'responsive_utils.dart';
+import 'formatters.dart';
 
 class AppTheme {
   // Modern "Fintech" Color Palette
@@ -35,11 +36,12 @@ class AppTheme {
     colors: [Color(0xFF020617), Color(0xFF0F172A)],
   );
 
-  // Neon Design Tokens
-  static const Color neonPurple = Color(0xFFC084FC); // Brighter purple for dark mode/accents
+  static const Color neonPurple = Color(0xFFC084FC);
   static const Color neonBlue = Color(0xFF60A5FA);
   static const Color neonTeal = Color(0xFF5EEAD4);
   static const Color neonEmerald = Color(0xFF34D399);
+  static const Color neonAmber = Color(0xFFFBBF24);
+  static const Color neonPink = Color(0xFFF472B6);
 
   static LinearGradient get neonPurpleGradient => LinearGradient(
     colors: [neonPurple, neonPurple.withValues(alpha: 0.5)],
@@ -65,6 +67,21 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
+  static Color glassColor(BuildContext context, double opacity) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return (isDark ? const Color(0xFF1E293B) : Colors.white).withValues(alpha: opacity);
+  }
+
+  static String formatCurrency(dynamic amount) {
+    if (amount == null) return "0.00";
+    try {
+      double value = double.parse(amount.toString());
+      return Formatters.formatAmountOnly(value);
+    } catch (e) {
+      return "0.00";
+    }
+  }
+
   // Glassmorphism effects
   static BoxDecoration glassDecoration({
     required BuildContext context,
@@ -79,18 +96,18 @@ class AppTheme {
       color: (isDark ? const Color(0xFF1E293B) : Colors.white).withValues(alpha: isDark ? 0.7 : opacity),
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: borderColor ?? (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+        color: borderColor ?? (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
         width: 1.0,
       ),
       boxShadow: hasGlow ? [
         BoxShadow(
-          color: (borderColor ?? primaryColor).withOpacity(isDark ? 0.3 : 0.1),
+          color: (borderColor ?? primaryColor).withValues(alpha: isDark ? 0.3 : 0.1),
           blurRadius: 16,
           offset: const Offset(0, 4),
         )
       ] : [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         )
@@ -220,7 +237,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         tileColor: surfaceColor,
-        selectedTileColor: accentColor.withOpacity(0.3),
+        selectedTileColor: accentColor.withValues(alpha: 0.3),
       ),
       dividerTheme: const DividerThemeData(
         color: dividerColor,
@@ -364,7 +381,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         tileColor: const Color(0xFF1E293B),
-        selectedTileColor: secondaryColor.withOpacity(0.2),
+        selectedTileColor: secondaryColor.withValues(alpha: 0.2),
       ),
       dividerTheme: const DividerThemeData(
         color: Color(0xFF334155),

@@ -327,11 +327,19 @@ class ResponsiveRowColumn extends StatelessWidget {
         children: children,
       );
     } else {
+      // Safely unwrap Expanded/Flexible children to prevent unbounded height errors 
+      // when ResponsiveRowColumn behaves as a Column within a scrollable view.
+      final safeChildren = children.map((child) {
+        if (child is Expanded) return child.child;
+        if (child is Flexible) return child.child;
+        return child;
+      }).toList();
+
       return Column(
         mainAxisAlignment: mainAxisAlignment,
         crossAxisAlignment: crossAxisAlignment,
         mainAxisSize: mainAxisSize,
-        children: children,
+        children: safeChildren,
       );
     }
   }

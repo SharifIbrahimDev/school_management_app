@@ -8,6 +8,7 @@ import '../models/payment_model.dart';
 
 class ReceiptService {
   static final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'en_NG',
     symbol: '₦ ',
     decimalDigits: 2,
   );

@@ -13,6 +13,10 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../core/utils/error_handler.dart';
 import '../../widgets/error_display_widget.dart';
+import '../../core/services/auth_service_api.dart';
+import 'debtors_list_screen.dart';
+import 'financial_report_screen.dart';
+import '../transactions/transactions_list_screen.dart';
 
 class ReportsDashboardScreen extends StatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -105,30 +109,48 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                         rowOnDesktop: true,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            flex: 3,
-                            child: Column(
+                          if (!context.isMobile)
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                children: [
+                                  _buildCollectionRateCard(),
+                                  const SizedBox(height: 24),
+                                  _buildMonthlyRevenueCard(),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
                               children: [
                                 _buildCollectionRateCard(),
                                 const SizedBox(height: 24),
                                 _buildMonthlyRevenueCard(),
                               ],
                             ),
-                          ),
                           SizedBox(
                             width: context.isMobile ? 0 : 24,
                             height: context.isMobile ? 24 : 0,
                           ),
-                          Expanded(
-                            flex: 2,
-                            child: Column(
+                          if (!context.isMobile)
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                children: [
+                                  _buildPaymentMethodsCard(),
+                                  const SizedBox(height: 24),
+                                  _buildReportActions(),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
                               children: [
                                 _buildPaymentMethodsCard(),
                                 const SizedBox(height: 24),
                                 _buildReportActions(),
                               ],
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 80),
@@ -315,12 +337,23 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
         const Text('On-Demand Reports', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         _buildActionTile('Debtors Analysis', 'View students with outstanding balances', Icons.money_off_rounded, Colors.red, () {
-          // Navigate to DebtorsListScreen
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const DebtorsListScreen()));
         }),
         const SizedBox(height: 12),
-        _buildActionTile('Inventory Report', 'School supply and asset tracking', Icons.inventory_2_rounded, Colors.orange, () {}),
+        _buildActionTile('Inventory Report', 'School supply and asset tracking', Icons.inventory_2_rounded, Colors.orange, () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const FinancialReportScreen()));
+        }),
         const SizedBox(height: 12),
-        _buildActionTile('Staff Payroll', 'Monthly salary and allowance summary', Icons.badge_rounded, Colors.blue, () {}),
+        _buildActionTile('Staff Payroll', 'Monthly salary and allowance summary', Icons.badge_rounded, Colors.blue, () {
+          final authService = Provider.of<AuthServiceApi>(context, listen: false);
+          final schoolId = authService.currentUserModel?.schoolId ?? '';
+          Navigator.push(
+            context, 
+            MaterialPageRoute(
+              builder: (context) => TransactionsListScreen(schoolId: schoolId)
+            )
+          );
+        }),
       ],
     );
   }

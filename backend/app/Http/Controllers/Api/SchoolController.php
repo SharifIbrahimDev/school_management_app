@@ -244,4 +244,39 @@ class SchoolController extends Controller
             'data' => $school,
         ]);
     }
+
+    /**
+     * Resolve account number to account name
+     */
+    public function resolveBank(Request $request, PaystackService $paystackService): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'account_number' => 'required|string|size:10',
+            'bank_code' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $result = $paystackService->resolveAccount(
+            $request->account_number,
+            $request->bank_code
+        );
+
+        if (isset($result['success']) && $result['success'] === false) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
 }

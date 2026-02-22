@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ClassModel {
   final String id;
   final String name;
@@ -40,24 +42,47 @@ class ClassModel {
   }
 
   factory ClassModel.fromMap(Map<String, dynamic> map) {
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
-    }
+    try {
+      DateTime parseDate(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.now();
+      }
 
-    return ClassModel(
-      id: (map['id'] ?? '').toString(),
-      name: map['class_name'] ?? map['name'] ?? '',
-      schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
-      sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
-      formTeacherId: (map['form_teacher_id'] ?? map['teacher_id'] ?? map['formTeacherId'] ?? map['assignedTeacherId'])?.toString(),
-      capacity: map['capacity'] as int?,
-      isActive: map['is_active'] ?? true,
-      studentIds: [], // Not returned by default API list
-      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
-      lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
-    );
+      return ClassModel(
+        id: (map['id'] ?? '').toString(),
+        name: map['class_name'] ?? map['name'] ?? 'No Name',
+        schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
+        sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
+        formTeacherId: (map['form_teacher_id'] ?? map['teacher_id'] ?? map['formTeacherId'] ?? map['assignedTeacherId'])?.toString(),
+        capacity: map['capacity'] == null ? null : int.tryParse(map['capacity'].toString()),
+        isActive: parseBool(map['is_active'] ?? map['isActive']),
+        studentIds: [],
+        createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+        lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
+      );
+    } catch (e) {
+      debugPrint('Error parsing ClassModel: $e');
+      return ClassModel(
+        id: (map['id'] ?? 'error').toString(),
+        name: 'Error',
+        schoolId: '',
+        sectionId: '',
+        createdAt: DateTime.now(),
+        lastModified: DateTime.now(),
+      );
+    }
+  }
+
+  static bool parseBool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final s = value.toLowerCase();
+      return s == '1' || s == 'true' || s == 'yes' || s == 'active';
+    }
+    return true;
   }
 
   ClassModel copyWith({

@@ -99,7 +99,7 @@ class TeacherClassListWidget extends StatelessWidget {
               decoration: AppTheme.glassDecoration(context: context, opacity: 0.6, hasGlow: true),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                   child: Icon(Icons.class_rounded, color: theme.colorScheme.primary),
                 ),
                 title: Text(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
@@ -5,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import '../config/api_config.dart';
 import '../utils/storage_helper.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -59,7 +61,8 @@ class ApiService {
         if (box.containsKey(cacheKey)) {
           final cachedData = box.get(cacheKey);
           final timestamp = cachedData['timestamp'] as int;
-          final content = Map<String, dynamic>.from(cachedData['content']);
+          // Using jsonDecode(jsonEncode()) to deeply cast all nested Map<dynamic, dynamic> to Map<String, dynamic>
+          final content = jsonDecode(jsonEncode(cachedData['content'])) as Map<String, dynamic>;
           
           // Check if cache is valid (default 1 hour if not specified)
           final duration = cacheDuration ?? const Duration(hours: 1);
@@ -111,7 +114,8 @@ class ApiService {
           final box = await _box;
           if (box.containsKey(cacheKey)) {
              final cachedData = box.get(cacheKey);
-             return Map<String, dynamic>.from(cachedData['content']);
+             // Using jsonDecode(jsonEncode()) for deep casting
+             return jsonDecode(jsonEncode(cachedData['content'])) as Map<String, dynamic>;
           }
         } catch (_) {}
       }
@@ -227,21 +231,26 @@ class ApiService {
   
   // Handle response
   Map<String, dynamic> _handleResponse(http.Response response) {
+    debugPrint('API Response [${response.statusCode}] ${response.request?.url}');
+    
     // Try to decode json, if it fails, it might be an HTML error page or empty
     Map<String, dynamic> body;
     try {
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
-      // Create a body for non-json responses
+      debugPrint('JSON Decode Error: $e');
+      debugPrint('Raw Body snippet: ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}');
+      
        body = {
         'message': response.statusCode >= 500 ? 'Server Error' : 'Unexpected response format',
-        'raw_body': response.body, // Debugging aid
+        'raw_body': response.body,
       };
     }
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     } else {
+      debugPrint('API Error Body: $body');
       throw ApiException(
         statusCode: response.statusCode,
         message: body['message'] ?? 'An error occurred',

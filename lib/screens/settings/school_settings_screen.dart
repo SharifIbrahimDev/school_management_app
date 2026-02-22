@@ -5,6 +5,7 @@ import '../../core/services/auth_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/custom_button.dart';
 import '../../widgets/responsive_widgets.dart';
 
 import '../../widgets/custom_app_bar.dart';
@@ -21,19 +22,62 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
   final _schoolNameController = TextEditingController();
   final _schoolShortCodeController = TextEditingController();
   final _accountNumberController = TextEditingController();
+  final _bankSearchController = TextEditingController();
   
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isSavingProfile = false;
+  bool _isResolving = false;
   List<Map<String, dynamic>> _banks = [];
+  List<Map<String, dynamic>> _filteredBanks = [];
   String? _selectedBankCode;
   String? _selectedBankName;
+  String? _resolvedAccountName;
   Map<String, dynamic>? _schoolData;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _accountNumberController.addListener(_onAccountNumberChanged);
+  }
+
+  void _onAccountNumberChanged() {
+    if (_accountNumberController.text.length == 10 && _selectedBankCode != null) {
+      _resolveAccount();
+    } else {
+      if (_resolvedAccountName != null) {
+        setState(() => _resolvedAccountName = null);
+      }
+    }
+  }
+
+  Future<void> _resolveAccount() async {
+    if (_isResolving) return;
+    
+    setState(() {
+      _isResolving = true;
+      _resolvedAccountName = null;
+    });
+
+    try {
+      final schoolService = Provider.of<SchoolServiceApi>(context, listen: false);
+      final result = await schoolService.resolveBankAccount(
+        accountNumber: _accountNumberController.text,
+        bankCode: _selectedBankCode!,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isResolving = false;
+          _resolvedAccountName = result?['account_name'];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isResolving = false);
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -41,10 +85,9 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
       final authService = Provider.of<AuthServiceApi>(context, listen: false);
       final schoolService = Provider.of<SchoolServiceApi>(context, listen: false);
       
-      // Load banks and school data in parallel
       final results = await Future.wait([
         schoolService.getBanks(),
-        authService.refreshUser(), // This will refresh the user and school data in context
+        authService.refreshUser(),
       ]);
 
       final user = authService.currentUser;
@@ -53,12 +96,22 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
         _schoolNameController.text = _schoolData?['name'] ?? '';
         _schoolShortCodeController.text = _schoolData?['short_code'] ?? '';
         
-        // If they already have a subaccount, we might want to pre-fill, 
-        // but for now let's focus on the new fields
+        if (_schoolData?['settlement_bank'] != null) {
+          _selectedBankCode = _schoolData?['settlement_bank'];
+          _accountNumberController.text = _schoolData?['account_number'] ?? '';
+        }
       }
 
       setState(() {
-        _banks = (results[0] as List).cast<Map<String, dynamic>>();
+        _banks = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _filteredBanks = _banks;
+        
+        // Find bank name if code exists
+        if (_selectedBankCode != null) {
+          final bank = _banks.firstWhere((b) => b['code'] == _selectedBankCode, orElse: () => {});
+          if (bank.isNotEmpty) _selectedBankName = bank['name'];
+        }
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -67,6 +120,91 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _filterBanks(String query) {
+    setState(() {
+      _filteredBanks = _banks
+          .where((bank) => bank['name'].toString().toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void _showBankPicker() {
+    _bankSearchController.clear();
+    _filteredBanks = _banks;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 20),
+              const Text('Select Your Bank', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: TextField(
+                  controller: _bankSearchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search Nigerian banks...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  ),
+                  onChanged: (val) {
+                    setModalState(() {
+                      _filteredBanks = _banks
+                          .where((bank) => bank['name'].toString().toLowerCase().contains(val.toLowerCase()))
+                          .toList();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: _filteredBanks.length,
+                  itemBuilder: (context, index) {
+                    final bank = _filteredBanks[index];
+                    final isSelected = _selectedBankCode == bank['code'];
+                    
+                    return ListTile(
+                      onTap: () {
+                        setState(() {
+                          _selectedBankCode = bank['code'];
+                          _selectedBankName = bank['name'];
+                        });
+                        if (_accountNumberController.text.length == 10) _resolveAccount();
+                        Navigator.pop(context);
+                      },
+                      leading: CircleAvatar(
+                        backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey[100],
+                        child: Text(bank['name'][0], style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+                      ),
+                      title: Text(bank['name'], style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                      trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor) : null,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -86,11 +224,10 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
         shortCode: _schoolShortCodeController.text.trim().toUpperCase(),
       );
 
-      // Refresh user to get updated school data and IDs
       await authService.refreshUser();
 
       if (mounted) {
-        AppSnackbar.showSuccess(context, message: 'School profile updated! Staff/Student IDs have been synchronized.');
+        AppSnackbar.showSuccess(context, message: 'School profile updated successfully!');
         setState(() => _isSavingProfile = false);
       }
     } catch (e) {
@@ -102,8 +239,8 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
   }
 
   Future<void> _setupSubaccount() async {
-    if (!_formKey.currentState!.validate() || _selectedBankCode == null) {
-      AppSnackbar.showError(context, message: 'Please complete all fields');
+    if (!_formKey.currentState!.validate() || _selectedBankCode == null || _resolvedAccountName == null) {
+      AppSnackbar.showError(context, message: 'Please verify account details first');
       return;
     }
 
@@ -117,8 +254,7 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
       );
 
       if (mounted) {
-        AppSnackbar.showSuccess(context, message: 'Independent Payouts Initialized Successfully!');
-        Navigator.pop(context);
+        _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
@@ -128,14 +264,49 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
     }
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Column(
+          children: [
+            Icon(Icons.verified_rounded, color: Colors.green, size: 64),
+            SizedBox(height: 16),
+            Text('Verification Successful!', textAlign: TextAlign.center),
+          ],
+        ),
+        content: const Text(
+          'Your independent payout system has been initialized. Paystack will now verify these details. You will receive an email once fully activated.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Close screen
+              },
+              child: const Text('Back to Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
+      extendBodyBehindAppBar: true,
+      appBar: CustomAppBar(
         title: 'Payout Settings',
+        backgroundColor: Colors.transparent,
       ),
       body: Container(
         height: double.infinity,
+        width: double.infinity,
         decoration: BoxDecoration(
           image: const DecorationImage(
             image: AssetImage('assets/images/auth_bg_pattern.png'),
@@ -143,14 +314,12 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
             opacity: 0.05,
           ),
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
+              AppTheme.primaryColor.withValues(alpha: 0.15),
               Colors.white,
             ],
-            stops: const [0.0, 0.4, 1.0],
           ),
         ),
         child: SafeArea(
@@ -159,41 +328,23 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
-                    padding: AppTheme.responsivePadding(context),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeader(),
                         const SizedBox(height: 32),
+                        
                         ResponsiveRowColumn(
                           rowOnMobile: false,
                           rowOnTablet: true,
                           rowOnDesktop: true,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Profile Section
-                            Expanded(
-                              flex: 1,
-                              child: _buildProfileSection(),
-                            ),
-                            
-                            if (!context.isMobile) const SizedBox(width: 32),
-                            if (context.isMobile) const SizedBox(height: 32),
-  
-                            // Payout Section
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                children: [
-                                  _buildPayoutHeader(),
-                                  const SizedBox(height: 24),
-                                  _buildSetupForm(),
-                                ],
-                              ),
-                            ),
+                            Expanded(child: _buildProfileSection()),
+                            const SizedBox(width: 24, height: 24),
+                            Expanded(child: _buildPayoutSection()),
                           ],
                         ),
-                        const SizedBox(height: 48),
                       ],
                     ),
                   ),
@@ -208,32 +359,31 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
       padding: const EdgeInsets.all(24),
       decoration: AppTheme.glassDecoration(
         context: context,
-        opacity: 0.8,
+        opacity: 0.4,
         borderRadius: 24,
-        hasGlow: true,
-        borderColor: AppTheme.primaryColor.withValues(alpha: 0.2),
       ),
-      child: Column(
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: AppTheme.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.account_balance_rounded, size: 48, color: AppTheme.primaryColor),
+            child: const Icon(Icons.shield_rounded, color: AppTheme.accentColor, size: 32),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'School Management',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Manage your school profile and financial settlement settings here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[700], height: 1.5, fontSize: 14),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Financial Security', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                  'Your payouts are processed directly via Paystack sub-accounts.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -241,161 +391,176 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
   }
 
   Widget _buildProfileSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: AppTheme.glassDecoration(
-        context: context,
-        opacity: 0.6,
-        borderRadius: 24,
-        borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.info_outline, size: 20, color: AppTheme.primaryColor),
-              SizedBox(width: 8),
-              Text('General Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _schoolNameController,
-            decoration: InputDecoration(
-              labelText: 'School Name',
-              prefixIcon: const Icon(Icons.school, color: AppTheme.primaryColor),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.3),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _schoolShortCodeController,
-            decoration: InputDecoration(
-              labelText: 'School Short Code',
-              helperText: 'Changing this will update all Staff & Student IDs',
-              prefixIcon: const Icon(Icons.tag, color: AppTheme.primaryColor),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.3),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            text: 'Update Profile',
-            isLoading: _isSavingProfile,
-            onPressed: _saveProfile,
-            icon: Icons.save_rounded,
-            backgroundColor: AppTheme.primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPayoutHeader() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Independent Payouts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.primaryColor)),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Link your school\'s bank account to receive automated daily payouts directly from Paystack.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[700], height: 1.5, fontSize: 14),
+        const Padding(
+          padding: EdgeInsets.only(left: 8, bottom: 12),
+          child: Text('SCHOOL PROFILE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2)),
+        ),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: AppTheme.glassDecoration(context: context, opacity: 0.6, borderRadius: 24),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _schoolNameController,
+                decoration: InputDecoration(
+                  labelText: 'School Legal Name',
+                  prefixIcon: const Icon(Icons.school_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _schoolShortCodeController,
+                decoration: InputDecoration(
+                  labelText: 'Unique Short Code',
+                  hintText: 'e.g. BHS',
+                  prefixIcon: const Icon(Icons.alternate_email_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              CustomButton(
+                text: 'Update School Info',
+                isLoading: _isSavingProfile,
+                onPressed: _saveProfile,
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.8),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSetupForm() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: AppTheme.glassDecoration(
-        context: context,
-        opacity: 0.6,
-        borderRadius: 24,
-        borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
+  Widget _buildPayoutSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 8, bottom: 12),
+          child: Text('SETTLEMENT ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2, color: AppTheme.accentColor)),
+        ),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: AppTheme.glassDecoration(context: context, opacity: 0.8, borderRadius: 24, hasGlow: true),
+          child: Form(
+            key: _formKey,
+            child: Column(
               children: [
-                Icon(Icons.payments_rounded, size: 20, color: AppTheme.primaryColor),
-                SizedBox(width: 8),
-                Text('Settlement Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                // Bank Picker
+                InkWell(
+                  onTap: _showBankPicker,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.account_balance_rounded, color: AppTheme.accentColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _selectedBankName ?? 'Select Settlement Bank',
+                            style: TextStyle(
+                              color: _selectedBankName == null ? Colors.grey[600] : Colors.black,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Account Number
+                TextFormField(
+                  controller: _accountNumberController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 10,
+                  decoration: InputDecoration(
+                    labelText: 'NUBAN Account Number',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.numbers_rounded),
+                    suffixIcon: _isResolving ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))) : null,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  validator: (val) => (val?.length ?? 0) < 10 ? 'Precisely 10 digits required' : null,
+                ),
+                
+                // Resolved Name View
+                if (_resolvedAccountName != null || _isResolving)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _resolvedAccountName != null ? Colors.green.withValues(alpha: 0.05) : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _resolvedAccountName != null ? Colors.green.withValues(alpha: 0.2) : Colors.grey[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _resolvedAccountName != null ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+                            color: _resolvedAccountName != null ? Colors.green : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _resolvedAccountName != null ? 'Account Verified' : 'Resolving Account...',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                                ),
+                                if (_resolvedAccountName != null)
+                                  Text(
+                                    _resolvedAccountName!.toUpperCase(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                const SizedBox(height: 32),
+                
+                CustomButton(
+                  text: 'Connect to Paystack',
+                  isLoading: _isSaving,
+                  onPressed: _setupSubaccount,
+                  icon: Icons.link_rounded,
+                  backgroundColor: AppTheme.accentColor,
+                ),
               ],
             ),
-            const SizedBox(height: 20),
-            
-            DropdownButtonFormField<String>(
-              initialValue: _selectedBankCode,
-              dropdownColor: Theme.of(context).cardColor,
-              decoration: InputDecoration(
-                labelText: 'Select Bank',
-                prefixIcon: const Icon(Icons.business_rounded, color: AppTheme.primaryColor),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.3),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-              items: _banks.map((bank) {
-                return DropdownMenuItem<String>(
-                  value: bank['code'],
-                  child: Text(bank['name'], style: const TextStyle(fontSize: 14)),
-                  onTap: () => _selectedBankName = bank['name'],
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => _selectedBankCode = val),
-              validator: (val) => val == null ? 'Please select a bank' : null,
-            ),
-            const SizedBox(height: 16),
-  
-            TextFormField(
-              controller: _accountNumberController,
-              keyboardType: TextInputType.number,
-              maxLength: 10,
-              decoration: InputDecoration(
-                labelText: 'Account Number',
-                prefixIcon: const Icon(Icons.numbers_rounded, color: AppTheme.primaryColor),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.3),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                counterText: '',
-              ),
-              validator: (val) => (val?.length ?? 0) < 10 ? 'Enter a valid 10-digit NUBAN' : null,
-            ),
-            
-            const SizedBox(height: 32),
-            
-            CustomButton(
-              text: 'Save & Initialize',
-              isLoading: _isSaving,
-              onPressed: _setupSubaccount,
-              icon: Icons.rocket_launch_rounded,
-              backgroundColor: AppTheme.accentColor,
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   @override
   void dispose() {
+    _accountNumberController.removeListener(_onAccountNumberChanged);
     _schoolNameController.dispose();
     _schoolShortCodeController.dispose();
     _accountNumberController.dispose();
+    _bankSearchController.dispose();
     super.dispose();
   }
 }

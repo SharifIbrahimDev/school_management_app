@@ -88,7 +88,8 @@ class ReportController extends Controller
         $expectedFromSchoolFees = $schoolFeesTotal * $activeStudentsCount;
 
         $expectedFromSectionFees = DB::table('fees')
-            ->join('students', 'fees.section_id', '=', 'students.section_id')
+            ->join('section_student', 'fees.section_id', '=', 'section_student.section_id')
+            ->join('students', 'section_student.student_id', '=', 'students.id')
             ->where('fees.fee_scope', 'section')
             ->where('fees.is_active', true)
             ->where('students.is_active', true)
@@ -128,19 +129,22 @@ class ReportController extends Controller
         $students = Student::where('school_id', $schoolId)
             ->where('is_active', true)
             ->when($sectionId, function ($q) use ($sectionId) {
-                return $q->where('section_id', $sectionId);
+                return $q->whereHas('sections', function ($sq) use ($sectionId) {
+                    $sq->where('sections.id', $sectionId);
+                });
             })
-            ->with(['section', 'classModel'])
+            ->with(['sections', 'classModel'])
             ->get();
 
         $debtors = [];
 
         foreach ($students as $student) {
+            $sectionIds = $student->sections->pluck('id')->toArray();
             $totalFees = Fee::where('school_id', $schoolId)
                 ->where('is_active', true)
-                ->where(function ($q) use ($student) {
+                ->where(function ($q) use ($student, $sectionIds) {
                     $q->where('fee_scope', 'school')
-                      ->orWhere(fn($sq) => $sq->where('fee_scope', 'section')->where('section_id', $student->section_id))
+                      ->orWhere(fn($sq) => $sq->where('fee_scope', 'section')->whereIn('section_id', $sectionIds))
                       ->orWhere(fn($sq) => $sq->where('fee_scope', 'class')->where('class_id', $student->class_id))
                       ->orWhere(fn($sq) => $sq->where('fee_scope', 'student')->where('student_id', $student->id));
                 })
@@ -162,7 +166,7 @@ class ReportController extends Controller
                 $debtors[] = [
                     'student_id' => $student->id,
                     'student_name' => $student->student_name,
-                    'section_name' => $student->section->section_name ?? 'N/A',
+                    'section_name' => $student->sections->pluck('section_name')->implode(', ') ?: 'N/A',
                     'class_name' => $student->classModel->class_name ?? 'N/A',
                     'parent_name' => $student->parent_name,
                     'parent_phone' => $student->parent_phone,
@@ -190,7 +194,7 @@ class ReportController extends Controller
 
         $results = $query->get();
 
-        $student = Student::with(['classModel', 'section'])->find($studentId);
+        $student = Student::with(['classModel', 'sections'])->find($studentId);
 
         return response()->json([
             'success' => true,

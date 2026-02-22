@@ -27,7 +27,7 @@ class ClassServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final classes = data['data'] as List;
-        return classes.cast<Map<String, dynamic>>();
+        return classes.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];
@@ -116,6 +116,7 @@ class ClassServiceApi extends ChangeNotifier {
     int id, {
     String? className,
     int? formTeacherId,
+    int? capacity,
     bool unassignTeacher = false,
     bool? isActive,
   }) async {
@@ -126,6 +127,7 @@ class ClassServiceApi extends ChangeNotifier {
       final body = <String, dynamic>{};
       if (className != null) body['class_name'] = className;
       if (formTeacherId != null) body['form_teacher_id'] = formTeacherId;
+      if (capacity != null) body['capacity'] = capacity;
       if (unassignTeacher) body['form_teacher_id'] = null;
       if (isActive != null) body['is_active'] = isActive;
       

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/utils/app_theme.dart';
+import 'loading_indicator.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -48,13 +49,9 @@ class CustomButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Colors.white,
-                ),
+            ? const LoadingIndicator(
+                size: 24,
+                color: Colors.white,
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,

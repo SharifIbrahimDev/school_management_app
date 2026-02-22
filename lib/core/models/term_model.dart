@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class TermModel {
   final String id;
   final String schoolId;
@@ -39,24 +41,50 @@ class TermModel {
   }
 
   factory TermModel.fromMap(Map<String, dynamic> map) {
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
-    }
+    try {
+      DateTime parseDate(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.now();
+      }
 
-    return TermModel(
-      id: (map['id'] ?? '').toString(),
-      schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
-      sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
-      sessionId: (map['session_id'] ?? map['sessionId'] ?? '').toString(),
-      termName: map['term_name'] ?? map['termName'] ?? '',
-      startDate: parseDate(map['start_date'] ?? map['startDate']),
-      endDate: parseDate(map['end_date'] ?? map['endDate']),
-      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
-      lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
-      isActive: map['is_active'] ?? map['isActive'] ?? true,
-    );
+      return TermModel(
+        id: (map['id'] ?? '').toString(),
+        schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
+        sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
+        sessionId: (map['session_id'] ?? map['sessionId'] ?? '').toString(),
+        termName: map['term_name'] ?? map['termName'] ?? 'No Term Name',
+        startDate: parseDate(map['start_date'] ?? map['startDate']),
+        endDate: parseDate(map['end_date'] ?? map['endDate']),
+        createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+        lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
+        isActive: parseBool(map['is_active'] ?? map['isActive']),
+      );
+    } catch (e) {
+      debugPrint('Error parsing TermModel: $e');
+      return TermModel(
+        id: (map['id'] ?? 'error').toString(),
+        schoolId: '',
+        sectionId: '',
+        sessionId: '',
+        termName: 'Error',
+        startDate: DateTime.now(),
+        endDate: DateTime.now(),
+        createdAt: DateTime.now(),
+        lastModified: DateTime.now(),
+      );
+    }
+  }
+
+  static bool parseBool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final s = value.toLowerCase();
+      return s == '1' || s == 'true' || s == 'yes' || s == 'active';
+    }
+    return true;
   }
 
   TermModel copyWith({

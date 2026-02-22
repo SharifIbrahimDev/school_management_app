@@ -10,6 +10,7 @@ import '../../core/services/section_service_api.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
 import '../../widgets/responsive_widgets.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -211,10 +212,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         title: 'Daily Attendance',
         actions: [
           IconButton(
-            onPressed: _isDirty ? _saveAttendance : null,
+            onPressed: (_isDirty && !_isLoading) ? _saveAttendance : null,
             icon: Icon(
               Icons.save_rounded, 
-              color: _isDirty ? Colors.white : Colors.white.withOpacity(0.5)
+              color: (_isDirty && !_isLoading) ? Colors.white : Colors.white.withValues(alpha: 0.5)
             ),
           ),
           const SizedBox(width: 8),
@@ -261,9 +262,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           rowOnTablet: true,
                           rowOnDesktop: true,
                           children: [
-                            Expanded(
-                              flex: context.isMobile ? 0 : 1,
-                              child: _buildFilterChip(
+                            if (!context.isMobile)
+                              Expanded(
+                                flex: 1,
+                                child: _buildFilterChip(
+                                  context,
+                                  label: _selectedClassId == null 
+                                    ? 'Select Class' 
+                                    : _classes.firstWhere((c) => c['id'] == _selectedClassId, orElse: () => {'name': 'Class'})['class_name'] ?? 'Class',
+                                  icon: Icons.school_rounded,
+                                  onTap: () => _showFilterDialog('class'),
+                                ),
+                              )
+                            else
+                              _buildFilterChip(
                                 context,
                                 label: _selectedClassId == null 
                                   ? 'Select Class' 
@@ -271,18 +283,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 icon: Icons.school_rounded,
                                 onTap: () => _showFilterDialog('class'),
                               ),
-                            ),
                             if (context.isMobile) const SizedBox(height: 12),
                             if (!context.isMobile) const SizedBox(width: 16),
-                            Expanded(
-                              flex: context.isMobile ? 0 : 1,
-                              child: _buildFilterChip(
+                            if (!context.isMobile)
+                              Expanded(
+                                flex: 1,
+                                child: _buildFilterChip(
+                                  context,
+                                  label: DateFormat('dd MMM, yyyy').format(_selectedDate),
+                                  icon: Icons.calendar_today_rounded,
+                                  onTap: () => _showDatePicker(),
+                                ),
+                              )
+                            else
+                              _buildFilterChip(
                                 context,
                                 label: DateFormat('dd MMM, yyyy').format(_selectedDate),
                                 icon: Icons.calendar_today_rounded,
                                 onTap: () => _showDatePicker(),
                               ),
-                            ),
                           ],
                         ),
                         if (_sections.isNotEmpty) ...[
@@ -301,7 +320,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           width: double.infinity,
                           height: 54,
                           child: ElevatedButton.icon(
-                            onPressed: () {
+                            onPressed: _isLoading ? null : () {
                               setState(() {
                                 for (var s in _students) s['status'] = 'present';
                                 _isDirty = true;
@@ -324,7 +343,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 // List / Grid
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const LoadingIndicator(size: 50)
                       : _students.isEmpty
                           ? const EmptyStateWidget(
                               icon: Icons.people_outline,
@@ -352,9 +371,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     borderRadius: 24,
                                     hasGlow: isPresent,
                                     borderColor: isPresent 
-                                      ? AppTheme.neonEmerald.withOpacity(0.3) 
+                                      ? AppTheme.neonEmerald.withValues(alpha: 0.3) 
                                       : isAbsent 
-                                        ? AppTheme.errorColor.withOpacity(0.3)
+                                        ? AppTheme.errorColor.withValues(alpha: 0.3)
                                         : Theme.of(context).dividerColor.withValues(alpha: 0.1),
                                   ),
                                   child: Column(
@@ -364,7 +383,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         children: [
                                           CircleAvatar(
                                             radius: 24,
-                                            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                                             child: Text(
                                               student['name'].isNotEmpty ? student['name'][0] : '?',
                                               style: const TextStyle(
@@ -478,16 +497,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: _isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? activeColor.withOpacity(0.5) : Colors.transparent,
+            color: isSelected ? activeColor.withValues(alpha: 0.5) : Colors.transparent,
             width: 1.5,
           ),
         ),
@@ -496,7 +515,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             Icon(
               icon,
               size: 20,
-              color: isSelected ? activeColor : Colors.grey.withOpacity(0.5),
+              color: isSelected ? activeColor : Colors.grey.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 2),
             Text(

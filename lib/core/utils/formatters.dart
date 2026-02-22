@@ -6,9 +6,18 @@ class Formatters {
   // Format currency (e.g., ₦1,000.00)
   static String formatCurrency(double amount) {
     final formatter = NumberFormat.currency(
+      locale: 'en_NG',
       symbol: AppConstants.currencySymbol,
       decimalDigits: 2,
     );
+    return formatter.format(amount);
+  }
+
+  // Format amount only (e.g., 1,000.00)
+  static String formatAmountOnly(double amount) {
+    final formatter = NumberFormat.decimalPattern('en_NG');
+    formatter.minimumFractionDigits = 2;
+    formatter.maximumFractionDigits = 2;
     return formatter.format(amount);
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_paystack_max/flutter_paystack_max.dart';
+import 'package:flutter_paystack/flutter_paystack.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
@@ -13,6 +13,8 @@ import '../../core/models/payment_model.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/responsive_widgets.dart';
+import '../../core/utils/formatters.dart';
 
 class PaymentsScreen extends StatefulWidget {
   final int? studentId; // If provided, shows history for this student
@@ -246,7 +248,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
         ),
         title: Text(
-          '₦${NumberFormat('#,##0.00').format(payment.amount)}',
+          Formatters.formatCurrency(payment.amount),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Column(
@@ -439,7 +441,7 @@ class _NewPaymentDialogState extends State<_NewPaymentDialog> {
                     
                     // Student Selection
                     DropdownButtonFormField<int>(
-                      value: _selectedStudentId,
+                      initialValue: _selectedStudentId,
                       decoration: InputDecoration(
                         labelText: 'Select Student',
                         filled: true,
@@ -465,7 +467,7 @@ class _NewPaymentDialogState extends State<_NewPaymentDialog> {
 
                     // Fee Selection
                     DropdownButtonFormField<int>(
-                      value: _selectedFeeId,
+                      initialValue: _selectedFeeId,
                       decoration: InputDecoration(
                         labelText: 'Select Fee',
                         filled: true,
@@ -476,7 +478,7 @@ class _NewPaymentDialogState extends State<_NewPaymentDialog> {
                         return DropdownMenuItem<int>(
                           value: fee['id'],
                           child: Text(
-                            "${fee['fee_name']} - ₦${fee['amount']}",
+                            "${fee['fee_name']} - ${Formatters.formatCurrency((fee['amount'] ?? 0).toDouble())}",
                             overflow: TextOverflow.ellipsis,
                           ),
                         );

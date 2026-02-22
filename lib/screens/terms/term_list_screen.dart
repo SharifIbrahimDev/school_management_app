@@ -14,7 +14,7 @@ import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../core/utils/error_handler.dart';
+
 
 class TermListView extends StatelessWidget {
   final TermServiceApi termService;

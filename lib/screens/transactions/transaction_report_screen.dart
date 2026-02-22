@@ -209,15 +209,15 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
         build: (pw.Context context) => [
           pw.Header(level: 0, child: pw.Text('Transaction Report')),
           pw.Paragraph(text: 'Generated on ${DateFormat('MMM dd, yyyy').format(DateTime.now())}'),
-          pw.Paragraph(text: 'Total Credits: ₦${(_reportSummary['totalCredits'] ?? 0.0).toStringAsFixed(2)}'),
-          pw.Paragraph(text: 'Total Debits: ₦${(_reportSummary['totalDebits'] ?? 0.0).toStringAsFixed(2)}'),
-          pw.Paragraph(text: 'Net Balance: ₦${(_reportSummary['netBalance'] ?? 0.0).toStringAsFixed(2)}'),
+          pw.Paragraph(text: 'Total Credits: ${Formatters.formatCurrency((_reportSummary['totalCredits'] ?? 0.0).toDouble())}'),
+          pw.Paragraph(text: 'Total Debits: ${Formatters.formatCurrency((_reportSummary['totalDebits'] ?? 0.0).toDouble())}'),
+          pw.Paragraph(text: 'Net Balance: ${Formatters.formatCurrency((_reportSummary['netBalance'] ?? 0.0).toDouble())}'),
           pw.SizedBox(height: 20),
           pw.TableHelper.fromTextArray(
             headers: ['Category', 'Amount', 'Type', 'Date'],
             data: _transactions.map((t) => [
               t.category,
-              '₦${t.amount.toStringAsFixed(2)}',
+              Formatters.formatCurrency(t.amount),
               t.transactionTypeDisplayName,
               DateFormat('MMM dd, yyyy').format(t.createdAt.toLocal()),
             ]).toList(),

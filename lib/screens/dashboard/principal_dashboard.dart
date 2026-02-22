@@ -19,6 +19,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/custom_drawer.dart';
 
 class PrincipalDashboard extends StatefulWidget {
   final String schoolId;
@@ -268,6 +269,7 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
       appBar: const CustomAppBar(
         title: 'Dashboard Overview',
       ),
+      drawer: const CustomDrawer(),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(

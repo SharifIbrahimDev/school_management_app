@@ -10,7 +10,7 @@ import 'edit_term_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
-import '../../core/utils/error_handler.dart';
+
 
 class TermDetailScreen extends StatefulWidget {
   final TermModel term;

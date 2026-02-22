@@ -134,7 +134,7 @@ class AuthServiceApi extends ChangeNotifier {
       try {
         final response = await _apiService.get(ApiConfig.me);
         if (response['success'] == true) {
-          _currentUser = response['data']['user'] as Map<String, dynamic>;
+          _currentUser = Map<String, dynamic>.from(response['data']['user']);
           await StorageHelper.saveUser(_currentUser!);
         }
       } catch (e) {
@@ -259,7 +259,7 @@ class AuthServiceApi extends ChangeNotifier {
       );
       
       if (response['success'] == true) {
-        final user = response['data'] as Map<String, dynamic>;
+        final user = Map<String, dynamic>.from(response['data']);
         await StorageHelper.saveUser(user);
         _currentUser = user;
         notifyListeners();
@@ -307,10 +307,10 @@ class AuthServiceApi extends ChangeNotifier {
       );
       
       if (response['success'] == true) {
-        final data = response['data'] as Map<String, dynamic>;
+        final data = Map<String, dynamic>.from(response['data']);
         final token = data['token'] as String?;
-        final user = data['user'] as Map<String, dynamic>;
-        final school = data['school'] as Map<String, dynamic>;
+        final user = Map<String, dynamic>.from(data['user']);
+        final school = Map<String, dynamic>.from(data['school']);
         
         if (token != null) {
           await _apiService.setToken(token);
@@ -339,7 +339,7 @@ class AuthServiceApi extends ChangeNotifier {
     try {
       final response = await _apiService.get(ApiConfig.me);
       if (response['success'] == true) {
-        _currentUser = response['data']['user'] as Map<String, dynamic>;
+        _currentUser = Map<String, dynamic>.from(response['data']['user']);
         await StorageHelper.saveUser(_currentUser!);
         notifyListeners();
         return _currentUser;

@@ -9,7 +9,7 @@ import '../../widgets/custom_button.dart';
 import 'edit_user_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/confirmation_dialog.dart';
-import '../../core/utils/error_handler.dart';
+
 
 class UserDetailsScreen extends StatefulWidget {
   final UserModel user;

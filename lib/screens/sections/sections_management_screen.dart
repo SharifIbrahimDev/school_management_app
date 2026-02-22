@@ -15,7 +15,37 @@ class SectionDetailScreen extends StatelessWidget {
 
   const SectionDetailScreen({super.key, required this.section});
 
-  // ... (keep methods)
+  Future<void> _deleteSection(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Section'),
+        content: Text('Are you sure you want to delete ${section.sectionName}? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final sectionId = int.tryParse(section.id) ?? 0;
+        await Provider.of<SectionServiceApi>(context, listen: false).deleteSection(sectionId);
+        if (context.mounted) {
+          AppSnackbar.showSuccess(context, message: 'Section deleted successfully');
+          Navigator.pop(context); // Go back to sections list
+        }
+      } catch (e) {
+        if (context.mounted) {
+          AppSnackbar.showError(context, message: 'Failed to delete section: $e');
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

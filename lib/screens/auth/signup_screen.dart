@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/custom_text_field.dart';
@@ -198,6 +199,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                 labelText: 'School Email (Optional)',
                                 keyboardType: TextInputType.emailAddress,
                                 prefixIcon: Icons.alternate_email_rounded,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return null;
+                                  return Validators.validateEmail(v);
+                                },
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -205,6 +210,12 @@ class _SignupScreenState extends State<SignupScreen> {
                                 labelText: 'School Phone (Optional)',
                                 keyboardType: TextInputType.phone,
                                 prefixIcon: Icons.contact_phone_rounded,
+                                maxLength: 11,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return null;
+                                  return Validators.validatePhoneNumber(v);
+                                },
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -231,7 +242,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 labelText: 'Login Email',
                                 keyboardType: TextInputType.emailAddress,
                                 prefixIcon: Icons.email_outlined,
-                                validator: (v) => v!.isEmpty ? 'Please enter your login email' : null,
+                                validator: (v) => Validators.validateEmail(v),
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -243,11 +254,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) return 'Please enter a password';
-                                  if (value.length < 8) return 'Password must be at least 8 characters';
-                                  return null;
-                                },
+                                validator: (value) => Validators.validatePassword(value),
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(

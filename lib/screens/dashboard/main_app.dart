@@ -8,7 +8,6 @@ import '../../widgets/navigation_sidebar.dart'; // Add sidebar
 import '../sections/section_list_screen.dart';
 import '../users/users_list_screen.dart';
 import '../sessions/academic_sessions_screen.dart';
-import '../transactions/transaction_report_screen.dart';
 import '../reports/reports_dashboard_screen.dart';
 import '../class/class_list_screen.dart';
 import '../../widgets/offline_banner.dart';
@@ -19,6 +18,8 @@ import 'bursar_dashboard.dart';
 import 'teacher_dashboard_screen.dart';
 import 'parent_dashboard_screen.dart';
 import '../profile/profile_screen.dart';
+import '../settings/school_settings_screen.dart';
+import '../../widgets/custom_drawer.dart';
 
 class MainApp extends StatefulWidget {
   final String userId;
@@ -48,7 +49,7 @@ class _MainAppState extends State<MainApp> {
     UserRole userRole = widget.role is UserRole
         ? widget.role
         : UserRole.values.firstWhere(
-          (r) => r.toString().split('.').last == widget.role,
+          (r) => r.toString().split('.').last.toLowerCase() == widget.role.toString().toLowerCase(),
       orElse: () => UserRole.proprietor,
     );
     
@@ -66,7 +67,7 @@ class _MainAppState extends State<MainApp> {
         isCollapsed: !isDesktop, // Collapse on tablet
       ),
       sidebarWidth: isDesktop ? 250 : 80, // Expanded on desktop, slim on tablet
-      
+      drawer: const CustomDrawer(),
       body: Column(
         children: [
           const OfflineBanner(),
@@ -114,6 +115,7 @@ class _MainAppState extends State<MainApp> {
           const ClassListScreen(),
           const UsersListScreen(),
           const ReportsDashboardScreen(),
+          const SchoolSettingsScreen(),
           ProfileScreen(),
         ];
       case UserRole.principal:
@@ -166,6 +168,7 @@ class _MainAppState extends State<MainApp> {
           const BottomNavigationBarItem(icon: Icon(Icons.class_rounded), label: 'Classes'),
           const BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Users'),
           const BottomNavigationBarItem(icon: Icon(Icons.analytics_rounded), label: 'Reports'),
+          const BottomNavigationBarItem(icon: Icon(Icons.settings_suggest_rounded), label: 'Settings'),
         ]);
         break;
       case UserRole.principal:

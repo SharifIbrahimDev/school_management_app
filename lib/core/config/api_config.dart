@@ -31,6 +31,7 @@ class ApiConfig {
   // Schools
   static const String schools = '/schools';
   static const String schoolsBanks = '/schools/banks';
+  static const String schoolsResolveBank = '/schools/resolve-bank';
   static String school(int id) => '/schools/$id';
   static String schoolStatistics(int id) => '/schools/$id/statistics';
   static String setupSubaccount(int id) => '/schools/$id/setup-subaccount';

@@ -8,6 +8,8 @@ import '../core/models/student_model.dart';
 import '../core/models/transaction_model.dart';
 import 'loading_indicator.dart';
 import 'empty_state_widget.dart';
+import '../screens/student/student_detail_screen.dart';
+import '../screens/transactions/transaction_detail_screen.dart';
 
 class GlobalSearchDelegate extends SearchDelegate {
   @override
@@ -59,8 +61,8 @@ class GlobalSearchDelegate extends SearchDelegate {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        final studentsData = snapshot.data?[0] as List<Map<String, dynamic>>? ?? [];
-        final transactionsData = snapshot.data?[1] as List<Map<String, dynamic>>? ?? [];
+        final studentsData = (snapshot.data?[0] ?? []) as List<Map<String, dynamic>>;
+        final transactionsData = (snapshot.data?[1] ?? []) as List<Map<String, dynamic>>;
 
         final students = studentsData.map((s) => StudentModel.fromMap(s)).toList();
         final transactions = transactionsData.map((t) => TransactionModel.fromMap(t)).toList();
@@ -89,7 +91,12 @@ class GlobalSearchDelegate extends SearchDelegate {
                 title: Text(student.fullName),
                 subtitle: Text('ID: ${student.admissionNumber ?? student.id}'),
                 onTap: () {
-                  // Navigate to student detail
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudentDetailScreen(student: student),
+                    ),
+                  );
                 },
               )),
             ],
@@ -101,12 +108,12 @@ class GlobalSearchDelegate extends SearchDelegate {
               ),
               ...transactions.map((transaction) => ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: (transaction.type == 'credit' || transaction.type == 'payment') 
+                  backgroundColor: transaction.transactionType == TransactionType.credit
                       ? Colors.green.withValues(alpha: 0.1) 
                       : Colors.red.withValues(alpha: 0.1),
                   child: Icon(
-                    (transaction.type == 'credit' || transaction.type == 'payment') ? Icons.arrow_downward : Icons.arrow_upward, 
-                    color: (transaction.type == 'credit' || transaction.type == 'payment') ? Colors.green : Colors.red,
+                    transaction.transactionType == TransactionType.credit ? Icons.arrow_downward : Icons.arrow_upward, 
+                    color: transaction.transactionType == TransactionType.credit ? Colors.green : Colors.red,
                     size: 18,
                   ),
                 ),
@@ -117,7 +124,12 @@ class GlobalSearchDelegate extends SearchDelegate {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 onTap: () {
-                  // Navigate to transaction detail
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TransactionDetailScreen(transaction: transaction),
+                    ),
+                  );
                 },
               )),
             ],

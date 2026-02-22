@@ -5,11 +5,16 @@ import 'package:intl/intl.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/analytics_charts.dart';
-import '../../widgets/loading_indicator.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/error_display_widget.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../core/services/report_service_api.dart';
 import '../../core/services/transaction_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/services/pdf_export_service.dart';
+import '../../core/models/transaction_model.dart';
+import '../../core/utils/formatters.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String schoolId;
@@ -41,29 +46,32 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final reportService = Provider.of<ReportServiceApi>(context, listen: false);
       final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
       
       final financials = await reportService.getFinancialSummary();
-      final transactions = await transactionService.getTransactions(limit: 5);
+      final transactionsData = await transactionService.getTransactions(limit: 5);
       final paymentMethods = await reportService.getPaymentMethods();
 
       double income = 0;
       double expense = 0;
       List<FlSpot> spots = [];
 
-      // Process monthly data (Assuming API returns list of {month: int, income: double, expense: double})
-      // If API returns something else, we adapt. Based on typical patterns:
-      
       // Initialize 12 months with 0
       Map<int, double> monthlyIncome = {for (var i = 1; i <= 12; i++) i: 0.0};
 
       for (var item in financials) {
         final double inc = (item['income'] ?? 0).toDouble();
         final double exp = (item['expense'] ?? 0).toDouble();
-        final int month = item['month'] ?? 0; // 1-12
+        
+        // Robustly parse the month key as its occasionally returned as a String by some API endpoints
+        final dynamic rawMonth = item['month'];
+        final int month = rawMonth is int ? rawMonth : int.tryParse(rawMonth?.toString() ?? '0') ?? 0;
         
         income += inc;
         expense += exp;
@@ -83,7 +91,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           _totalExpense = expense;
           _netProfit = income - expense;
           _incomeSpots = spots;
-          _recentTransactions = transactions;
+          _recentTransactions = transactionsData;
           _paymentMethods = paymentMethods;
           _isLoading = false;
         });
@@ -91,10 +99,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     } catch (e) {
       debugPrint('Error loading analytics: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
       }
     }
   }
+
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -122,71 +135,153 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: LoadingIndicator())
-              : AppTheme.constrainedContent(
-                  context: context,
-                  maxWidth: 1600,
-                  child: SingleChildScrollView(
-                    padding: AppTheme.responsivePadding(context),
-                    child: ResponsiveRowColumn(
-                      rowOnMobile: false,
-                      rowOnTablet: false, // Column on tablet for more width for charts
-                      rowOnDesktop: true, // Split only on desktop
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Main Analytics Area
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSummaryGrid(context),
-                              const SizedBox(height: 32),
-                              _buildFinancialTrendSection(context),
-                              const SizedBox(height: 32),
-                              _buildChartsSection(context),
-                              if (!context.isDesktop) ...[
-                                const SizedBox(height: 32),
-                                _buildRecentTransactionsSection(context),
-                              ],
-                              const SizedBox(height: 48),
+              ? _buildLoadingState()
+              : _errorMessage != null
+                ? Center(
+                    child: ErrorDisplayWidget(
+                      error: _errorMessage!,
+                      onRetry: _loadData,
+                    ),
+                  )
+                : AppTheme.constrainedContent(
+                    context: context,
+                    maxWidth: 1600,
+                    child: SingleChildScrollView(
+                      padding: AppTheme.responsivePadding(context),
+                      child: RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: ResponsiveRowColumn(
+                          rowOnMobile: false,
+                          rowOnTablet: false, // Column on tablet for more width for charts
+                          rowOnDesktop: true, // Split only on desktop
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Main Analytics Area
+                            if (context.isDesktop)
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildSummaryGrid(context),
+                                    const SizedBox(height: 32),
+                                    _buildFinancialTrendSection(context),
+                                    const SizedBox(height: 32),
+                                    _buildChartsSection(context),
+                                    if (!context.isDesktop) ...[
+                                      const SizedBox(height: 32),
+                                      _buildRecentTransactionsSection(context),
+                                    ],
+                                    const SizedBox(height: 48),
+                                  ],
+                                ),
+                              )
+                            else
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildSummaryGrid(context),
+                                  const SizedBox(height: 32),
+                                  _buildFinancialTrendSection(context),
+                                  const SizedBox(height: 32),
+                                  _buildChartsSection(context),
+                                  if (!context.isDesktop) ...[
+                                    const SizedBox(height: 32),
+                                    _buildRecentTransactionsSection(context),
+                                  ],
+                                  const SizedBox(height: 48),
+                                ],
+                              ),
+                            
+                            // Recent Transactions Side Panel (Desktop Only)
+                            if (context.isDesktop) ...[
+                              const SizedBox(width: 32),
+                              Expanded(
+                                flex: 1,
+                                child: _buildRecentTransactionsSection(context),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                        
-                        // Recent Transactions Side Panel (Desktop Only)
-                        if (context.isDesktop) ...[
-                          const SizedBox(width: 32),
-                          Expanded(
-                            flex: 1,
-                            child: _buildRecentTransactionsSection(context),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: _generateDetailedReport,
         label: Text(context.isMobile ? 'Report' : 'Generate Detailed Report'),
-        icon: const Icon(Icons.description_rounded),
+        icon: _isPrinting 
+          ? const LoadingIndicator(size: 20, color: Colors.white)
+          : const Icon(Icons.description_rounded),
         backgroundColor: AppTheme.neonEmerald,
         foregroundColor: Colors.white,
       ),
     );
   }
 
+  bool _isPrinting = false;
+  Future<void> _generateDetailedReport() async {
+    if (_isPrinting) return;
+    setState(() => _isPrinting = true);
+    try {
+      final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+      
+      final startDate = DateTime.now().subtract(const Duration(days: 30));
+      final endDate = DateTime.now();
+      
+      final allTransactions = await transactionService.getTransactions(
+        limit: 100,
+        startDate: DateFormat('yyyy-MM-dd').format(startDate),
+        endDate: DateFormat('yyyy-MM-dd').format(endDate),
+      );
+      
+      final pdfService = PdfExportService();
+      await pdfService.exportTransactionReport(
+        schoolName: 'School Analytics Report',
+        transactions: allTransactions.map((t) => TransactionModel.fromMap(t)).toList(),
+        sectionName: 'All Sections',
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Report generation failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+
+  Widget _buildLoadingState() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const DashboardCardSkeletonLoader(),
+          const SizedBox(height: 24),
+          const ChartSkeletonLoader(),
+          const SizedBox(height: 24),
+          const ChartSkeletonLoader(),
+          const SizedBox(height: 32),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 5,
+            itemBuilder: (context, index) => const ListItemSkeletonLoader(),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Responsive summary grid instead of horizontal scroll
   Widget _buildSummaryGrid(BuildContext context) {
-    final columns = context.isMobile ? 1 : (context.isTablet ? 3 : 3);
-    
     final summaryCards = [
       _buildSummaryCard(
         context,
         'Total Income',
-        NumberFormat.currency(symbol: '₦', decimalDigits: 0).format(_totalIncome),
+        Formatters.formatCurrency(_totalIncome),
         '+12.5%',
         AppTheme.neonEmerald,
         Icons.account_balance_wallet_rounded,
@@ -194,7 +289,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       _buildSummaryCard(
         context,
         'Expenses',
-        NumberFormat.currency(symbol: '₦', decimalDigits: 0).format(_totalExpense),
+        Formatters.formatCurrency(_totalExpense),
         '-5.2%',
         AppTheme.errorColor,
         Icons.trending_down_rounded,
@@ -202,7 +297,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       _buildSummaryCard(
         context,
         'Net Profit',
-        NumberFormat.currency(symbol: '₦', decimalDigits: 0).format(_netProfit),
+        Formatters.formatCurrency(_netProfit),
         '+18.3%',
         AppTheme.neonPurple,
         Icons.insights_rounded,
@@ -217,6 +312,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       runSpacing: 16,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: context.isMobile ? 1.8 : 1.3,
       children: summaryCards,
     );
   }
@@ -230,9 +326,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
 
       children: [
-        Expanded(child: _buildAttendanceBarChart(context)),
+        if (context.isTablet || context.isDesktop)
+          Expanded(child: _buildAttendanceBarChart(context))
+        else
+          _buildAttendanceBarChart(context),
         if (context.isMobile) const SizedBox(height: 16),
-        Expanded(child: _buildPaymentMethodPieChart(context)),
+        if (context.isTablet || context.isDesktop)
+          Expanded(child: _buildPaymentMethodPieChart(context))
+        else
+          _buildPaymentMethodPieChart(context),
       ],
     );
   }
@@ -266,7 +368,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (trend.contains('+') ? AppTheme.neonEmerald : AppTheme.errorColor).withOpacity(0.1),
+                  color: (trend.contains('+') ? AppTheme.neonEmerald : AppTheme.errorColor).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -449,8 +551,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   }
 
   Widget _buildRecentTransactionsSection(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: context.isDesktop 
@@ -492,7 +592,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               final color = isIncome ? AppTheme.neonEmerald : AppTheme.errorColor;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _buildTransactionCard(context, name, NumberFormat.currency(symbol: '₦').format(amount), type, color),
+                child: _buildTransactionCard(context, name, Formatters.formatCurrency(amount), type, color),
               );
             }),
           if (context.isDesktop) ...[

@@ -37,7 +37,7 @@ class FeeServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final fees = data['data'] as List;
-        return fees.cast<Map<String, dynamic>>();
+        return fees.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

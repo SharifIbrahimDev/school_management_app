@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/utils/app_theme.dart';
 import '../core/utils/validators.dart';
 
@@ -15,6 +16,7 @@ class CustomTextField extends StatelessWidget {
   final bool isRequired;
   final String? helperText;
   final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
@@ -30,6 +32,7 @@ class CustomTextField extends StatelessWidget {
     this.isRequired = false,
     this.helperText,
     this.maxLength,
+    this.inputFormatters,
   });
 
   @override
@@ -51,7 +54,10 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines ?? 1,
       obscureText: obscureText,
-      maxLength: maxLength,
+      maxLength: maxLength ?? (keyboardType == TextInputType.phone ? 11 : null),
+      inputFormatters: inputFormatters ?? (keyboardType == TextInputType.phone 
+          ? [FilteringTextInputFormatter.digitsOnly] 
+          : null),
       style: Theme.of(context).textTheme.bodyLarge,
     );
   }

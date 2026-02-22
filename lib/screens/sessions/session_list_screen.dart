@@ -9,6 +9,7 @@ import '../../core/services/auth_service_api.dart';
 import 'add_session_screen.dart';
 import 'edit_session_screen.dart';
 import 'session_detail_screen.dart';
+import '../../widgets/loading_indicator.dart';
 
 class SessionListView extends StatefulWidget {
   final List<SectionModel> assignedSections;
@@ -167,7 +168,7 @@ class _SessionListViewState extends State<SessionListView> {
             future: _sessionsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: LoadingIndicator(size: 40));
               }
               if (snapshot.hasError) {
                 return Center(

@@ -41,7 +41,7 @@ class _AssignParentScreenState extends State<AssignParentScreen> {
     super.dispose();
   }
 
-  Future<void> _loadParents() async {
+  Future<void> _loadParents({String? query}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -49,7 +49,11 @@ class _AssignParentScreenState extends State<AssignParentScreen> {
 
     try {
       final userService = Provider.of<UserServiceApi>(context, listen: false);
-      final parentsData = await userService.getUsers(role: 'parent');
+      final parentsData = await userService.getUsers(
+        role: 'parent',
+        search: query,
+        limit: 50, // Increase limit to find more potential parents
+      );
       
       final parents = parentsData
           .map((data) => UserModel.fromMap(data))
@@ -73,17 +77,8 @@ class _AssignParentScreenState extends State<AssignParentScreen> {
   }
 
   void _filterParents(String query) {
-    if (query.isEmpty) {
-      setState(() => _filteredParents = _parents);
-    } else {
-      setState(() {
-        _filteredParents = _parents.where((parent) {
-          final name = parent.fullName.toLowerCase();
-          final email = parent.email.toLowerCase();
-          final term = query.toLowerCase();
-          return name.contains(term) || email.contains(term);
-        }).toList();
-      });
+    if (query.length >= 2 || query.isEmpty) {
+      _loadParents(query: query.isEmpty ? null : query);
     }
   }
 

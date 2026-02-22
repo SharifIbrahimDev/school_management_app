@@ -10,7 +10,6 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../core/utils/error_handler.dart';
 
 class ExamResultScreen extends StatefulWidget {
   final int examId;
@@ -156,7 +155,7 @@ class _ExamResultScreenState extends State<ExamResultScreen> {
               label: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               onPressed: _isLoading ? null : _saveResults,
               style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.1),
+                backgroundColor: Colors.white.withValues(alpha: 0.1),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),

@@ -27,7 +27,7 @@ class SessionServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final sessions = data['data'] as List;
-        return sessions.cast<Map<String, dynamic>>();
+        return sessions.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

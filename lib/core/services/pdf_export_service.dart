@@ -7,7 +7,7 @@ import '../models/transaction_model.dart';
 /// Service for exporting data to PDF format
 /// Currently supports transaction reports with plans to expand
 class PdfExportService {
-  final currencyFormat = NumberFormat.currency(symbol: '₦', decimalDigits: 2);
+  final currencyFormat = NumberFormat.currency(symbol: 'N', decimalDigits: 2);
   final dateFormat = DateFormat('dd/MM/yyyy');
 
   /// Generate a PDF report for transactions
@@ -21,6 +21,17 @@ class PdfExportService {
     DateTime? endDate,
   }) async {
     final pdf = pw.Document();
+
+    // Use a font that supports the Naira symbol
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+    final ttfStyle = pw.TextStyle(font: font);
+    final boldTtfStyle = pw.TextStyle(font: boldFont, fontWeight: pw.FontWeight.bold);
+
+    final pdfCurrencyFormat = NumberFormat.currency(symbol: 'N', decimalDigits: 2); // Fallback to N if font fails
+    
+    // We'll use the currency format with the actual symbol but ensure font is set
+    final nairaSymbol = '₦';
 
     // Calculate totals
     double totalIncome = 0;
@@ -40,6 +51,10 @@ class PdfExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(
+          base: font,
+          bold: boldFont,
+        ),
         build: (context) => [
           // Header
           _buildHeader(schoolName),
@@ -50,6 +65,7 @@ class PdfExportService {
             'Transaction Report',
             style: pw.TextStyle(
               fontSize: 24,
+              font: boldFont,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
@@ -349,13 +365,13 @@ class PdfExportService {
         
         // Data rows
         ...transactions.map((transaction) {
-          final isIncome = transaction.type == TransactionType.credit;
+          final isIncome = transaction.transactionType == TransactionType.credit;
           return pw.TableRow(
             children: [
-              _buildTableCell(dateFormat.format(transaction.createdAt)),
+              _buildTableCell(dateFormat.format(transaction.transactionDate)),
               _buildTableCell(transaction.category),
               _buildTableCell(transaction.description ?? '-'),
-              _buildTableCell(transaction.paymentMethod.toUpperCase()),
+              _buildTableCell(transaction.paymentType.displayName.toUpperCase()),
               _buildTableCell(
                 currencyFormat.format(transaction.amount),
                 color: isIncome ? PdfColors.green : PdfColors.red,

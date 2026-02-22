@@ -139,6 +139,7 @@ class _StudentListWidgetState extends State<StudentListWidget> {
                   padding: EdgeInsets.zero,
                   spacing: 16,
                   runSpacing: 16,
+                  childAspectRatio: context.isMobile ? 3.8 : 1.3,
                   children: students.map((student) {
                     final isSelected = _selectedIds.contains(student.id);
 

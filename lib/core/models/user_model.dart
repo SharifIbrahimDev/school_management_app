@@ -94,13 +94,29 @@ class UserModel {
       createdAt: parseDate(map['created_at'] ?? map['createdAt']),
       lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
       lastSignIn: parseDate(map['last_sign_in'] ?? map['lastSignIn']),
-      isActive: map['is_active'] ?? map['isActive'] ?? true,
+      isActive: parseBool(map['is_active'] ?? map['isActive']),
     );
+  }
+
+  static bool parseBool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final s = value.toLowerCase();
+      return s == '1' || s == 'true' || s == 'yes' || s == 'active';
+    }
+    return true;
   }
 
   static List<String> _parseList(dynamic list) {
     if (list == null) return [];
-    if (list is List) return list.map((e) => e.toString()).toList();
+    if (list is List) {
+      return list.map((e) {
+        if (e is Map) return (e['id'] ?? '').toString();
+        return e.toString();
+      }).toList();
+    }
     return [];
   }
 

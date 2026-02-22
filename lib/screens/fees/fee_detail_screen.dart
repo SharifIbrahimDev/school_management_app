@@ -305,11 +305,11 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                           context: context,
                           opacity: 0.8,
                           borderRadius: 28,
-                          borderColor: theme.dividerColor.withOpacity(0.1),
+                          borderColor: theme.dividerColor.withValues(alpha: 0.1),
                           hasGlow: true,
                         ).copyWith(
                           gradient: LinearGradient(
-                            colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                            colors: [Colors.white, Colors.white.withValues(alpha: 0.9)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -326,7 +326,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                                   child: CircularProgressIndicator(
                                     value: _fee.isFullyPaid ? 1.0 : (_fee.amountPaid / (_fee.amount > 0 ? _fee.amount : 1)),
                                     strokeWidth: 8,
-                                    backgroundColor: Colors.grey.withOpacity(0.1),
+                                    backgroundColor: Colors.grey.withValues(alpha: 0.1),
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       _fee.isFullyPaid ? AppTheme.neonEmerald : AppTheme.neonBlue,
                                     ),
@@ -352,7 +352,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
-                                color: (_fee.isFullyPaid ? AppTheme.neonEmerald : AppTheme.neonBlue).withOpacity(0.1),
+                                color: (_fee.isFullyPaid ? AppTheme.neonEmerald : AppTheme.neonBlue).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -505,7 +505,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                                borderRadius: BorderRadius.circular(16),
                                boxShadow: [
                                  BoxShadow(
-                                   color: Colors.black.withOpacity(0.03),
+                                   color: Colors.black.withValues(alpha: 0.03),
                                    blurRadius: 10,
                                    offset: const Offset(0, 4),
                                  ),
@@ -516,7 +516,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                                leading: Container(
                                  padding: const EdgeInsets.all(10),
                                  decoration: BoxDecoration(
-                                   color: AppTheme.neonEmerald.withOpacity(0.1),
+                                   color: AppTheme.neonEmerald.withValues(alpha: 0.1),
                                    shape: BoxShape.circle,
                                  ),
                                  child: const Icon(Icons.check_rounded, color: AppTheme.neonEmerald, size: 18),
@@ -532,7 +532,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                                trailing: Container(
                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                  decoration: BoxDecoration(
-                                   color: theme.dividerColor.withOpacity(0.1),
+                                   color: theme.dividerColor.withValues(alpha: 0.1),
                                    borderRadius: BorderRadius.circular(8),
                                  ),
                                  child: Text(
@@ -577,7 +577,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),

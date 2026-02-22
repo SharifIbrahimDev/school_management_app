@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 enum TransactionType { credit, debit }
@@ -103,37 +104,55 @@ class TransactionModel {
   }
 
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
-    final typeStr = map['transaction_type'] as String? ?? map['type'] as String? ?? 'income';
-    final transactionType = typeStr == 'expense' ? TransactionType.debit : TransactionType.credit;
-    
-    final paymentTypeStr = map['payment_method'] as String? ?? 'cash';
-    final paymentType = _getFrontendPaymentType(paymentTypeStr);
+    try {
+      final typeStr = map['transaction_type'] as String? ?? map['type'] as String? ?? 'income';
+      final transactionType = typeStr == 'expense' ? TransactionType.debit : TransactionType.credit;
+      
+      final paymentTypeStr = map['payment_method'] as String? ?? 'cash';
+      final paymentType = _getFrontendPaymentType(paymentTypeStr);
 
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
+      DateTime parseDate(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.now();
+      }
+
+      return TransactionModel(
+        id: (map['id'] ?? const Uuid().v4()).toString(),
+        amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+        description: map['description'] as String?,
+        createdBy: (map['created_by'] ?? map['createdBy'] ?? '').toString(),
+        createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+        transactionDate: parseDate(map['transaction_date'] ?? map['transactionDate']),
+        transactionType: transactionType,
+        paymentType: paymentType,
+        cashAmount: (map['cash_amount'] ?? map['cashAmount'] as num?)?.toDouble(),
+        transferAmount: (map['transfer_amount'] ?? map['transferAmount'] as num?)?.toDouble(),
+        category: map['category'] as String? ?? (transactionType == TransactionType.credit ? CreditCategory.schoolFees.displayName : DebitCategory.generalExpenses.displayName),
+        schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
+        sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
+        classId: (map['class_id'] ?? map['classId'] ?? '').toString(),
+        termId: (map['term_id'] ?? map['termId'] ?? '').toString(),
+        sessionId: (map['session_id'] ?? map['sessionId'])?.toString(),
+        studentId: (map['student_id'] ?? map['studentId'])?.toString(),
+      );
+    } catch (e) {
+      debugPrint('Error parsing TransactionModel: $e');
+      return TransactionModel(
+        id: 'error',
+        amount: 0.1,
+        createdBy: '',
+        createdAt: DateTime.now(),
+        transactionDate: DateTime.now(),
+        transactionType: TransactionType.credit,
+        paymentType: PaymentType.cash,
+        category: 'Error',
+        schoolId: '',
+        sectionId: '',
+        classId: '',
+        termId: '',
+      );
     }
-
-    return TransactionModel(
-      id: (map['id'] ?? const Uuid().v4()).toString(),
-      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      description: map['description'] as String?,
-      createdBy: (map['created_by'] ?? map['createdBy'] ?? '').toString(),
-      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
-      transactionDate: parseDate(map['transaction_date'] ?? map['transactionDate']),
-      transactionType: transactionType,
-      paymentType: paymentType,
-      cashAmount: (map['cash_amount'] ?? map['cashAmount'] as num?)?.toDouble(),
-      transferAmount: (map['transfer_amount'] ?? map['transferAmount'] as num?)?.toDouble(),
-      category: map['category'] as String? ?? (transactionType == TransactionType.credit ? CreditCategory.schoolFees.displayName : DebitCategory.generalExpenses.displayName),
-      schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
-      sectionId: (map['section_id'] ?? map['sectionId'] ?? '').toString(),
-      classId: (map['class_id'] ?? map['classId'] ?? '').toString(),
-      termId: (map['term_id'] ?? map['termId'] ?? '').toString(),
-      sessionId: (map['session_id'] ?? map['sessionId'])?.toString(),
-      studentId: (map['student_id'] ?? map['studentId'])?.toString(),
-    );
   }
 
   TransactionModel copyWith({

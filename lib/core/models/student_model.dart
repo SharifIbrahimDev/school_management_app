@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class StudentModel {
   final String id;
   final String? prettyId;
@@ -63,51 +65,74 @@ class StudentModel {
   }
 
   factory StudentModel.fromMap(Map<String, dynamic> map) {
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
-    }
+    try {
+      DateTime parseDate(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.now();
+      }
 
-    List<String> parseSectionIds(dynamic value) {
-      // Handle both old single sectionId and new sectionIds array
-      if (value == null) {
-        // Check for legacy single section_id
-        final legacySectionId = map['section_id'] ?? map['sectionId'];
-        if (legacySectionId != null) {
+      List<String> parseSectionIds(dynamic value) {
+        // 1. Check if 'sections' (objects) is provided
+        final sections = map['sections'] ?? map['Sections'];
+        if (sections is List && sections.isNotEmpty) {
+          return sections.map((s) {
+            if (s is Map) return (s['id'] ?? '').toString();
+            return s.toString();
+          }).toList();
+        }
+
+        // 2. Check value (if it's already 'section_ids')
+        if (value is List) {
+          return value.map((e) => e.toString()).toList();
+        }
+
+        // 3. Fallback to legacy single 'section_id'
+        final legacySectionId = value ?? map['section_id'] ?? map['sectionId'];
+        if (legacySectionId != null && legacySectionId != '') {
           return [legacySectionId.toString()];
         }
+        
         return [];
       }
-      if (value is List) {
-        return value.map((e) => e.toString()).toList();
-      }
-      if (value is String) {
-        return [value];
-      }
-      return [];
-    }
 
-    return StudentModel(
-      id: (map['id'] ?? '').toString(),
-      prettyId: map['pretty_id'] ?? map['prettyId'],
-      fullName: map['student_name'] ?? map['full_name'] ?? map['fullName'] ?? '',
-      schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
-      sectionIds: parseSectionIds(map['section_ids'] ?? map['sectionIds']),
-      classId: (map['class_id'] ?? map['classId'] ?? '').toString(),
-      parentId: (map['parent_id'] ?? map['parentId'])?.toString(),
-      admissionNumber: map['admission_number'] ?? map['admissionNumber'],
-      dateOfBirth: map['date_of_birth'] != null ? DateTime.tryParse(map['date_of_birth']) : null,
-      gender: map['gender'],
-      address: map['address'],
-      parentName: map['parent_name'] ?? map['parentName'],
-      parentPhone: map['parent_phone'] ?? map['parentPhone'],
-      parentEmail: map['parent_email'] ?? map['parentEmail'],
-      photoUrl: map['photo_url'] ?? map['photoUrl'],
-      isActive: map['is_active'] ?? map['isActive'] ?? true,
-      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
-      lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
-    );
+      return StudentModel(
+        id: (map['id'] ?? '').toString(),
+        prettyId: map['pretty_id'] ?? map['prettyId'],
+        fullName: map['student_name'] ?? map['full_name'] ?? map['fullName'] ?? '',
+        schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
+        sectionIds: parseSectionIds(map['section_ids'] ?? map['sectionIds']),
+        classId: (map['class_id'] ?? map['classId'] ?? '').toString(),
+        parentId: (map['parent_id'] ?? map['parentId'])?.toString(),
+        admissionNumber: map['admission_number'] ?? map['admissionNumber'],
+        dateOfBirth: map['date_of_birth'] != null ? DateTime.tryParse(map['date_of_birth']) : null,
+        gender: map['gender'],
+        address: map['address'],
+        parentName: map['parent_name'] ?? map['parentName'],
+        parentPhone: map['parent_phone'] ?? map['parentPhone'],
+        parentEmail: map['parent_email'] ?? map['parentEmail'],
+        photoUrl: map['photo_url'] ?? map['photoUrl'],
+        isActive: parseBool(map['is_active'] ?? map['isActive']),
+        createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+        lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
+      );
+    } catch (e, stack) {
+      debugPrint('Error parsing StudentModel: $e');
+      debugPrint('Map causing error: $map');
+      debugPrint('Stacktrace: $stack');
+      rethrow;
+    }
+  }
+
+  static bool parseBool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final s = value.toLowerCase();
+      return s == '1' || s == 'true' || s == 'yes' || s == 'active';
+    }
+    return true;
   }
 
   StudentModel copyWith({

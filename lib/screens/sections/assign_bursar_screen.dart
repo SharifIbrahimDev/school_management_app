@@ -116,7 +116,7 @@ class _AssignBursarScreenState extends State<AssignBursarScreen> {
                             ),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                                 child: Icon(Icons.person, color: theme.colorScheme.primary),
                               ),
                               title: Text(bursar.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -136,7 +136,7 @@ class _AssignBursarScreenState extends State<AssignBursarScreen> {
                       ),
             if (_isLoading)
               Container(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 child: const Center(child: LoadingIndicator(message: 'Updating assignment...')),
               ),
           ],

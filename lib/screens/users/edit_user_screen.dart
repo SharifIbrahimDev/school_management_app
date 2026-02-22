@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
@@ -144,6 +145,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
                           prefixIcon: Icons.email,
                           keyboardType: TextInputType.emailAddress,
                           isRequired: true,
+                          validator: (value) => Validators.validateEmail(value),
                         ),
                         const SizedBox(height: 16),
                         CustomTextField(
@@ -153,6 +155,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
                           keyboardType: TextInputType.phone,
                           isRequired: true,
                           maxLength: 11,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (value) => Validators.validatePhoneNumber(value),
                         ),
                         const SizedBox(height: 16),

@@ -47,7 +47,7 @@ class TransactionServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final transactions = data['data'] as List;
-        return transactions.cast<Map<String, dynamic>>();
+        return transactions.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

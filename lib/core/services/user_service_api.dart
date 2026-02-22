@@ -11,15 +11,22 @@ class UserServiceApi extends ChangeNotifier {
     String? role,
     int? sectionId,
     bool? isActive,
+    int? limit,
+    int page = 1,
+    String? search,
   }) async {
     try {
       final schoolId = await StorageHelper.getSchoolId();
       if (schoolId == null) throw Exception('School ID not found');
       
-      final queryParams = <String, String>{};
+      final queryParams = <String, String>{
+        'page': page.toString(),
+      };
       if (role != null) queryParams['role'] = role;
       if (sectionId != null) queryParams['section_id'] = sectionId.toString();
       if (isActive != null) queryParams['is_active'] = isActive.toString();
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (search != null) queryParams['search'] = search;
       
       final response = await _apiService.get(
         ApiConfig.users(schoolId),
@@ -29,7 +36,7 @@ class UserServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final users = data['data'] as List;
-        return users.cast<Map<String, dynamic>>();
+        return users.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

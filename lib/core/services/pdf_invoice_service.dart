@@ -126,7 +126,7 @@ class PdfInvoiceService {
   }
 
   static String _formatCurrency(double amount) {
-    final format = NumberFormat.currency(symbol: '₦'); // Nigeria Currency
+    final format = NumberFormat.currency(locale: 'en_NG', symbol: '₦'); // Nigeria Currency
     return format.format(amount);
   }
 }

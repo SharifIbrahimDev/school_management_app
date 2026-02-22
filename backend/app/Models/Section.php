@@ -57,11 +57,12 @@ class Section extends Model
     }
 
     /**
-     * Get the students for the section.
+     * The students that belong to the section.
      */
-    public function students(): HasMany
+    public function students(): BelongsToMany
     {
-        return $this->hasMany(Student::class);
+        return $this->belongsToMany(Student::class, 'section_student')
+            ->withTimestamps();
     }
 
     /**

@@ -10,9 +10,7 @@ import 'student_parent_linking_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/loading_indicator.dart';
-import '../../core/utils/error_handler.dart';
 import '../../widgets/error_display_widget.dart';
-import '../../widgets/app_snackbar.dart';
 
 class UsersListScreen extends StatefulWidget {
   const UsersListScreen({super.key});
@@ -23,37 +21,54 @@ class UsersListScreen extends StatefulWidget {
 
 class _UsersListScreenState extends State<UsersListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   String _selectedRoleFilter = 'All';
   
   List<UserModel> _users = [];
   bool _isLoading = true;
+  bool _isFetchingMore = false;
+  int _currentPage = 1;
+  bool _hasMore = true;
   String? _errorMessage;
   UserModel? _currentUser;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
-    });
+    _scrollController.addListener(_onScroll);
     _loadUsers();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (!_isFetchingMore && _hasMore && !_isLoading) {
+        _loadUsers(loadMore: true);
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadUsers() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  static const int _pageLimit = 100;
 
+  Future<void> _loadUsers({bool loadMore = false}) async {
+    if (loadMore) {
+      if (_isFetchingMore || !_hasMore) return;
+      setState(() => _isFetchingMore = true);
+    } else {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _currentPage = 1;
+        _hasMore = true;
+      });
+    }
+    
     try {
       final authService = Provider.of<AuthServiceApi>(context, listen: false);
       final userService = Provider.of<UserServiceApi>(context, listen: false);
@@ -66,18 +81,44 @@ class _UsersListScreenState extends State<UsersListScreen> {
         throw Exception('Access denied');
       }
 
-      final usersData = await userService.getUsers();
+      final pageToLoad = loadMore ? _currentPage : 1;
+
+      // Convert "All" to null, and other roles to lowercase strings for the API
+      final roleFilter = _selectedRoleFilter == 'All' ? null : _selectedRoleFilter.toLowerCase();
+      
+      final usersData = await userService.getUsers(
+        role: roleFilter,
+        page: pageToLoad,
+        limit: _pageLimit,
+        search: _searchController.text.isNotEmpty ? _searchController.text : null,
+      );
       
       if (mounted) {
         setState(() {
-          _users = usersData.map((data) => UserModel.fromMap(data)).toList();
-          _isLoading = false;
+          final newUsers = usersData.map((data) => UserModel.fromMap(data)).toList();
+          
+          if (loadMore) {
+            _users.addAll(newUsers);
+            _isFetchingMore = false;
+          } else {
+            _users = newUsers;
+            _isLoading = false;
+          }
+          
+          _currentPage = pageToLoad + 1;
+          // If we got 0 users, there's definitely no more.
+          // Or if we got some users but it's clearly less than a standard page (usually 15 or 50)
+          // we should still keep trying until we get an empty list or total results is known.
+          if (newUsers.isEmpty) {
+            _hasMore = false;
+          }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isFetchingMore = false;
           _errorMessage = 'Error loading users: $e';
         });
       }
@@ -100,7 +141,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
           IconButton(
             icon: const Icon(Icons.link, color: Colors.white),
             tooltip: 'Link Parent-Student',
-            onPressed: () {
+            onPressed: _isLoading ? null : () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const StudentParentLinkingScreen()),
@@ -109,7 +150,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadUsers,
+            onPressed: _isLoading ? null : _loadUsers,
           ),
         ],
       ),
@@ -117,7 +158,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton(
           backgroundColor: AppTheme.primaryColor,
-          onPressed: () {
+          onPressed: _isLoading ? null : () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AddUserScreen()),
@@ -160,13 +201,23 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         borderRadius: 16,
                         borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                       ),
-                      child: TextField(
+                       child: TextField(
                         controller: _searchController,
-                        decoration: const InputDecoration(
+                        onSubmitted: (value) => _loadUsers(),
+                        decoration: InputDecoration(
                           hintText: 'Search users...',
-                          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
+                          prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
+                          suffixIcon: _searchController.text.isNotEmpty 
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: _isLoading ? null : () {
+                                  _searchController.clear();
+                                  _loadUsers();
+                                },
+                              )
+                            : null,
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
                       ),
                     ),
@@ -189,7 +240,15 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                 child: Text(role, style: const TextStyle(fontSize: 14)),
                               ))
                           .toList(),
-                      onChanged: (value) => setState(() => _selectedRoleFilter = value!),
+                      onChanged: _isLoading ? null : (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedRoleFilter = value;
+                            _isLoading = true;
+                          });
+                          _loadUsers();
+                        }
+                      },
                       icon: const Icon(Icons.filter_list, size: 20, color: AppTheme.primaryColor),
                       dropdownColor: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
@@ -216,25 +275,23 @@ class _UsersListScreenState extends State<UsersListScreen> {
 }
 
   Widget _buildUsersList() {
-    final filteredUsers = _users.where((user) {
-      if (user.role == UserRole.proprietor) return false;
-      final matchesSearch = user.fullName.toLowerCase().contains(_searchQuery) ||
-          user.roleDisplayName.toLowerCase().contains(_searchQuery);
-      final matchesRole = _selectedRoleFilter == 'All' || user.roleDisplayName == _selectedRoleFilter;
-      return matchesSearch && matchesRole;
-    }).toList();
+    // Include everyone except the proprietor in the "All" view
+    final filteredUsers = _selectedRoleFilter == 'All'
+        ? _users.where((u) => u.role != UserRole.proprietor).toList()
+        : _users.where((u) => u.role.toString().split('.').last.toLowerCase() == _selectedRoleFilter.toLowerCase()).toList();
 
     if (filteredUsers.isEmpty) {
       return EmptyStateWidget(
         icon: Icons.people_outline_rounded,
         title: 'No Users Found',
-        message: _searchQuery.isNotEmpty 
-            ? 'We couldn\'t find any users matching "$_searchQuery"'
+        message: _searchController.text.isNotEmpty 
+            ? 'We couldn\'t find any users matching "${_searchController.text}"'
             : 'Start by adding your first school staff or parent account',
-        actionButtonText: _searchQuery.isNotEmpty ? 'Clear Search' : 'Add User',
+        actionButtonText: _searchController.text.isNotEmpty ? 'Clear Search' : 'Add User',
         onActionPressed: () {
-          if (_searchQuery.isNotEmpty) {
+          if (_searchController.text.isNotEmpty) {
             _searchController.clear();
+            _loadUsers();
           } else {
             Navigator.push(
               context,
@@ -246,9 +303,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: filteredUsers.length,
+      itemCount: filteredUsers.length + (_isFetchingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == filteredUsers.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: LoadingIndicator(message: 'Loading more...'),
+          );
+        }
         final user = filteredUsers[index];
         return _buildUserCard(context, user);
       },

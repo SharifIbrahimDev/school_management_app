@@ -68,11 +68,25 @@ class ImportController extends Controller
                     'password' => Hash::make('password123'),
                     'role' => $role,
                     'phone_number' => $rowMap['phone'] ?? null,
+                    'address' => $rowMap['address'] ?? null,
                     'school_id' => $schoolId,
                     'is_active' => true,
                 ]);
 
-                // Create associated records if needed (e.g. Teacher profile) but User model handles basic auth.
+                // 2. Assign Sections if provided in CSV (optional column 'section' or 'section_name')
+                $sectionColumn = isset($rowMap['section']) ? 'section' : (isset($rowMap['section_name']) ? 'section_name' : null);
+                if ($sectionColumn && !empty($rowMap[$sectionColumn])) {
+                    $sectionNames = explode('|', $rowMap[$sectionColumn]);
+                    $sectionIds = [];
+                    foreach ($sectionNames as $name) {
+                        $section = \App\Models\Section::firstOrCreate(
+                            ['school_id' => $schoolId, 'section_name' => trim($name)],
+                            ['is_active' => true]
+                        );
+                        $sectionIds[] = $section->id;
+                    }
+                    $user->sections()->attach($sectionIds);
+                }
 
                 $importedCount++;
             }
@@ -129,17 +143,23 @@ class ImportController extends Controller
                 if (count($row) !== count($header)) continue;
                 $rowMap = array_combine($header, $row);
 
-                // 1. Get or Create Section
-                $section = \App\Models\Section::firstOrCreate(
-                    ['school_id' => $schoolId, 'section_name' => trim($rowMap['section_name'])],
-                    ['is_active' => true]
-                );
+                // 1. Get or Create Sections (Handle multiple with '|')
+                $sectionNames = explode('|', $rowMap['section_name']);
+                $sectionIds = [];
+                
+                foreach ($sectionNames as $name) {
+                    $section = \App\Models\Section::firstOrCreate(
+                        ['school_id' => $schoolId, 'section_name' => trim($name)],
+                        ['is_active' => true]
+                    );
+                    $sectionIds[] = $section->id;
+                }
 
-                // 2. Get or Create Class inside that section
+                // 2. Get or Create Class inside the FIRST section mentioned (or current logic)
                 $class = \App\Models\ClassModel::firstOrCreate(
                     [
                         'school_id' => $schoolId, 
-                        'section_id' => $section->id, 
+                        'section_id' => $sectionIds[0], 
                         'class_name' => trim($rowMap['class_name'])
                     ],
                     ['is_active' => true, 'capacity' => 30]
@@ -157,7 +177,6 @@ class ImportController extends Controller
                 $studentName = trim($rowMap['first_name'] . ' ' . $rowMap['last_name']);
                 $student = Student::create([
                     'school_id' => $schoolId,
-                    'section_id' => $section->id,
                     'class_id' => $class->id,
                     'student_name' => $studentName,
                     'admission_number' => !empty($rowMap['admission_number']) ? $rowMap['admission_number'] : null,
@@ -165,6 +184,9 @@ class ImportController extends Controller
                     'gender' => strtolower($rowMap['gender'] ?? 'other'),
                     'is_active' => true,
                 ]);
+
+                // 4.1 Attach all Sections
+                $student->sections()->attach($sectionIds);
 
                 // 5. Auto-Assign Fees
                 if ($shouldAssignFees) {
@@ -465,6 +487,175 @@ class ImportController extends Controller
                 'imported_count' => $importedCount,
                 'errors' => $errors,
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Import failed', 'error' => $e->getMessage()], 500);
+        }
+    }
+    /**
+     * Super Section Import: Section + Principal + Bursar
+     */
+    public function superSectionImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt',
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        $file = $request->file('file');
+        $data = array_map('str_getcsv', file($file->getRealPath()));
+        $header = array_shift($data);
+
+        $schoolId = $request->school_id;
+        $importedCount = 0;
+        $errors = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($data as $index => $row) {
+                if (count($row) !== count($header)) continue;
+                $rowMap = array_combine($header, $row);
+
+                // 1. Create Section
+                $section = \App\Models\Section::firstOrCreate(
+                    ['school_id' => $schoolId, 'section_name' => trim($rowMap['section_name'])],
+                    ['description' => $rowMap['description'] ?? null, 'is_active' => true]
+                );
+
+                // 2. Principal
+                if (!empty($rowMap['principal_email'])) {
+                    $principal = User::firstOrCreate(
+                        ['email' => trim($rowMap['principal_email'])],
+                        [
+                            'full_name' => $rowMap['principal_name'] ?? 'Principal',
+                            'password' => Hash::make('password123'),
+                            'role' => 'principal',
+                            'school_id' => $schoolId,
+                            'is_active' => true,
+                        ]
+                    );
+                    $principal->sections()->syncWithoutDetaching([$section->id]);
+                }
+
+                // 3. Bursar
+                if (!empty($rowMap['bursar_email'])) {
+                    $bursar = User::firstOrCreate(
+                        ['email' => trim($rowMap['bursar_email'])],
+                        [
+                            'full_name' => $rowMap['bursar_name'] ?? 'Bursar',
+                            'password' => Hash::make('password123'),
+                            'role' => 'bursar',
+                            'school_id' => $schoolId,
+                            'is_active' => true,
+                        ]
+                    );
+                    $bursar->sections()->syncWithoutDetaching([$section->id]);
+                }
+
+                $importedCount++;
+            }
+            DB::commit();
+            return response()->json(['message' => 'Super Section Import complete', 'imported_count' => $importedCount, 'errors' => $errors]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Import failed', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Ultimate Student Import: Section + Class + Teacher + Student + Parent
+     */
+    public function ultimateStudentImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt',
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        $file = $request->file('file');
+        $data = array_map('str_getcsv', file($file->getRealPath()));
+        $header = array_shift($data);
+
+        $schoolId = $request->school_id;
+        $importedCount = 0;
+        $errors = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($data as $index => $row) {
+                if (count($row) !== count($header)) continue;
+                $rowMap = array_combine($header, $row);
+
+                // 1. Resolve Sections
+                $sectionNames = explode('|', $rowMap['section_name']);
+                $sectionIds = [];
+                foreach ($sectionNames as $name) {
+                    $sec = \App\Models\Section::firstOrCreate(
+                        ['school_id' => $schoolId, 'section_name' => trim($name)],
+                        ['is_active' => true]
+                    );
+                    $sectionIds[] = $sec->id;
+                }
+
+                // 2. Resolve Teacher
+                $teacherId = null;
+                if (!empty($rowMap['teacher_email'])) {
+                    $teacher = User::firstOrCreate(
+                        ['email' => trim($rowMap['teacher_email'])],
+                        [
+                            'full_name' => $rowMap['teacher_name'] ?? 'Teacher',
+                            'password' => Hash::make('password123'),
+                            'role' => 'teacher',
+                            'school_id' => $schoolId,
+                            'is_active' => true,
+                        ]
+                    );
+                    $teacher->sections()->syncWithoutDetaching($sectionIds);
+                    $teacherId = $teacher->id;
+                }
+
+                // 3. Resolve Class
+                $class = \App\Models\ClassModel::firstOrCreate(
+                    [
+                        'school_id' => $schoolId,
+                        'section_id' => $sectionIds[0],
+                        'class_name' => trim($rowMap['class_name'])
+                    ],
+                    ['form_teacher_id' => $teacherId, 'is_active' => true, 'capacity' => 30]
+                );
+
+                // 4. Resolve Parent
+                $parentId = null;
+                if (!empty($rowMap['parent_email'])) {
+                    $parent = User::firstOrCreate(
+                        ['email' => trim($rowMap['parent_email'])],
+                        [
+                            'full_name' => $rowMap['parent_name'] ?? 'Parent',
+                            'password' => Hash::make('password123'),
+                            'role' => 'parent',
+                            'phone_number' => $rowMap['parent_phone'] ?? null,
+                            'school_id' => $schoolId,
+                            'is_active' => true,
+                        ]
+                    );
+                    $parentId = $parent->id;
+                }
+
+                // 5. Create Student
+                $student = Student::create([
+                    'school_id' => $schoolId,
+                    'class_id' => $class->id,
+                    'parent_id' => $parentId,
+                    'student_name' => trim(($rowMap['student_first_name'] ?? '') . ' ' . ($rowMap['student_last_name'] ?? '')),
+                    'admission_number' => $rowMap['admission_number'] ?? null,
+                    'is_active' => true,
+                ]);
+                $student->sections()->attach($sectionIds);
+
+                $importedCount++;
+            }
+            DB::commit();
+            return response()->json(['message' => 'Ultimate Student Import complete', 'imported_count' => $importedCount, 'errors' => $errors]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Import failed', 'error' => $e->getMessage()], 500);

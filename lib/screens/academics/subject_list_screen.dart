@@ -11,7 +11,6 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/confirmation_dialog.dart';
-import '../../core/utils/error_handler.dart';
 
 class SubjectListScreen extends StatefulWidget {
   const SubjectListScreen({super.key});
@@ -298,6 +297,7 @@ class _SubjectDialogState extends State<_SubjectDialog> {
   }
 
   @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -353,7 +353,7 @@ class _SubjectDialogState extends State<_SubjectDialog> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<int>(
-                  value: _selectedClassId,
+                  initialValue: _selectedClassId,
                   decoration: InputDecoration(
                     labelText: 'Class',
                     filled: true,
@@ -371,7 +371,7 @@ class _SubjectDialogState extends State<_SubjectDialog> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<int>(
-                  value: _selectedTeacherId,
+                  initialValue: _selectedTeacherId,
                   decoration: InputDecoration(
                     labelText: 'Teacher (Optional)',
                     filled: true,

@@ -9,6 +9,7 @@ import '../../core/models/payment_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../core/utils/formatters.dart';
 
 class ParentFeeScreen extends StatefulWidget {
   final int studentId;
@@ -157,7 +158,7 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  NumberFormat.currency(symbol: '₦').format(balance),
+                  Formatters.formatCurrency(balance),
                   style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
@@ -202,7 +203,7 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  NumberFormat.currency(symbol: '₦').format(payment.amount),
+                  Formatters.formatCurrency(payment.amount),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),

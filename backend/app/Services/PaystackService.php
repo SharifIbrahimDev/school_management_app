@@ -73,4 +73,34 @@ class PaystackService
             ];
         }
     }
+
+    /**
+     * Resolve account number to account name
+     */
+    public function resolveAccount(string $accountNumber, string $bankCode)
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->secretKey,
+            ])->get($this->baseUrl . '/bank/resolve', [
+                'account_number' => $accountNumber,
+                'bank_code' => $bankCode,
+            ]);
+
+            if ($response->successful()) {
+                return $response->json()['data'];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json()['message'] ?? 'Could not resolve account details'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Paystack Account Resolution Exception: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Service error during account resolution'
+            ];
+        }
+    }
 }

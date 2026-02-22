@@ -75,8 +75,8 @@ class _AddClassScreenState extends State<AddClassScreen> {
             end: Alignment.bottomRight,
             colors: [
               theme.colorScheme.surface,
-              theme.colorScheme.surface.withOpacity(0.8),
-              theme.primaryColor.withOpacity(0.05),
+              theme.colorScheme.surface.withValues(alpha: 0.8),
+              theme.primaryColor.withValues(alpha: 0.05),
             ],
           ),
         ),

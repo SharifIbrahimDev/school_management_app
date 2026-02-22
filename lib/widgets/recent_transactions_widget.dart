@@ -4,6 +4,7 @@ import '../core/models/transaction_model.dart';
 import '../core/services/transaction_service_api.dart';
 import '../screens/transactions/transaction_detail_screen.dart';
 import '../screens/transactions/transactions_list_screen.dart';
+import '../core/utils/formatters.dart';
 
 class RecentTransactionsWidget extends StatelessWidget {
   final String sectionId;
@@ -105,10 +106,14 @@ class RecentTransactionsWidget extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final transactionsData = snapshot.data!;
-            final transactions = transactionsData.map((data) => TransactionModel.fromMap(data)).toList();
+            try {
+              final transactionsData = snapshot.data!;
+              final transactions = transactionsData
+                  .map((data) => TransactionModel.fromMap(data))
+                  .where((t) => t.id != 'error')
+                  .toList();
 
-            if (transactions.isEmpty) {
+              if (transactions.isEmpty) {
               return Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -181,7 +186,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                       ),
                     ),
                     trailing: Text(
-                      '₦${transaction.amount.toStringAsFixed(2)}',
+                      Formatters.formatCurrency(transaction.amount),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: isCredit ? Colors.green : Colors.red,
@@ -197,6 +202,9 @@ class RecentTransactionsWidget extends StatelessWidget {
                 }).toList(),
               ),
             );
+          } catch (e) {
+            return Center(child: Text('Error displaying transactions: $e'));
+          }
           },
         ),
       ],

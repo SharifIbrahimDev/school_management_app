@@ -29,7 +29,7 @@ class TermServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final terms = data['data'] as List;
-        return terms.cast<Map<String, dynamic>>();
+        return terms.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       
       return [];

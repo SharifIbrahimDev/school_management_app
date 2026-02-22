@@ -13,12 +13,37 @@ class SchoolServiceApi extends ChangeNotifier {
       
       if (response['success'] == true) {
         final List<dynamic> banks = response['data'] ?? [];
-        return banks.cast<Map<String, dynamic>>();
+        return banks.map((e) => Map<String, dynamic>.from(e)).toList();
       }
       
       return [];
     } catch (e) {
       throw Exception('Error fetching banks: $e');
+    }
+  }
+
+  /// Resolve bank account number to name
+  Future<Map<String, dynamic>?> resolveBankAccount({
+    required String accountNumber,
+    required String bankCode,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiConfig.schoolsResolveBank,
+        queryParameters: {
+          'account_number': accountNumber,
+          'bank_code': bankCode,
+        },
+        cacheEnabled: false, // Don't cache verification results
+      );
+
+      if (response['success'] == true) {
+        return Map<String, dynamic>.from(response['data']);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error resolving bank account: $e');
+      return null;
     }
   }
 
@@ -31,7 +56,7 @@ class SchoolServiceApi extends ChangeNotifier {
       final response = await _apiService.get(ApiConfig.school(schoolId));
 
       if (response['success'] == true) {
-        return response['data'] as Map<String, dynamic>;
+        return Map<String, dynamic>.from(response['data']);
       } else {
         throw Exception(response['message'] ?? 'Failed to fetch school details');
       }
@@ -64,7 +89,7 @@ class SchoolServiceApi extends ChangeNotifier {
       );
 
       if (response['success'] == true) {
-        return response['data'] as Map<String, dynamic>;
+        return Map<String, dynamic>.from(response['data']);
       } else {
         throw Exception(response['message'] ?? 'Failed to update school');
       }
@@ -93,7 +118,7 @@ class SchoolServiceApi extends ChangeNotifier {
       );
 
       if (response['success'] == true) {
-        return response['data'] as Map<String, dynamic>;
+        return Map<String, dynamic>.from(response['data']);
       } else {
         throw Exception(response['message'] ?? 'Failed to setup subaccount');
       }

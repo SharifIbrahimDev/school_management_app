@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class SectionModel {
   final String id;
   final String schoolId;
@@ -49,26 +51,38 @@ class SectionModel {
   }
 
   factory SectionModel.fromMap(Map<String, dynamic> map) {
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-      return DateTime.now();
-    }
+    try {
+      DateTime parseDate(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.now();
+      }
 
-    return SectionModel(
-      id: (map['id'] ?? '').toString(),
-      schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
-      sectionName: map['section_name'] ?? map['sectionName'] ?? '',
-      aboutSection: map['about_section'] ?? map['aboutSection'],
-      academicSessionIds: [], // Not returned by default API list
-      classIds: [], // Not returned by default API list
-      assignedPrincipalIds: [],
-      assignedBursarIds: [],
-      assignedTeacherIds: [],
-      parentIds: [],
-      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
-      lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
-    );
+      return SectionModel(
+        id: (map['id'] ?? '').toString(),
+        schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
+        sectionName: map['section_name'] ?? map['sectionName'] ?? 'No Name',
+        aboutSection: map['about_section'] ?? map['aboutSection'],
+        academicSessionIds: [],
+        classIds: [],
+        assignedPrincipalIds: [],
+        assignedBursarIds: [],
+        assignedTeacherIds: [],
+        parentIds: [],
+        createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+        lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
+      );
+    } catch (e, stack) {
+      debugPrint('Error parsing SectionModel: $e');
+      debugPrint('Map: $map');
+      return SectionModel(
+        id: (map['id'] ?? 'error').toString(),
+        schoolId: '',
+        sectionName: 'Error Loading Section',
+        createdAt: DateTime.now(),
+        lastModified: DateTime.now(),
+      );
+    }
   }
 
   SectionModel copyWith({

@@ -4,27 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SchoolApp - Premium Bulk Portal</title>
+    <title>BulkOps - Institutional Migration Suite</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --primary: #10b981;
-            --primary-glow: rgba(16, 185, 129, 0.15);
-            --secondary: #064e3b;
-            --accent: #34d399;
-            --bg-grad: radial-gradient(circle at top right, #f0fdfa, #f8fafc);
-            --surface: rgba(255, 255, 255, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --sidebar-bg: #064e3b;
-            --text-main: #0f172a;
+            --primary: #064E3B;
+            --primary-glow: rgba(6, 78, 59, 0.1);
+            --secondary: #022C22;
+            --accent: #10B981;
+            --bg-grad: radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.6) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(240, 253, 244, 0.8) 0, transparent 50%),
+                #f8fafc;
+            --surface: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --sidebar-bg: #0f172a;
+            --text-main: #1e293b;
             --text-muted: #64748b;
             --error: #ef4444;
             --success: #10b981;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -34,7 +38,7 @@
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--bg-grad);
             color: var(--text-main);
             display: flex;
@@ -42,184 +46,207 @@
             overflow-x: hidden;
         }
 
-        /* --- Sidebar Redesign --- */
+        /* --- Sidebar --- */
         .sidebar {
-            width: 280px;
+            width: 260px;
             background: var(--sidebar-bg);
-            padding: 40px 24px;
+            padding: 32px 20px;
             display: flex;
             flex-direction: column;
             position: fixed;
             height: 100vh;
             color: white;
-            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
             z-index: 100;
         }
 
         .brand {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 50px;
+            gap: 12px;
+            margin-bottom: 40px;
+            padding: 0 12px;
         }
 
         .brand-logo {
-            width: 45px;
-            height: 45px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, var(--accent), var(--primary));
-            border-radius: 14px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 24px;
-            box-shadow: 0 8px 15px rgba(16, 185, 129, 0.3);
+            font-size: 20px;
+            box-shadow: 0 8px 16px rgba(6, 78, 59, 0.2);
         }
 
         .brand-name {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 700;
             letter-spacing: -0.5px;
-            background: linear-gradient(to bottom, #ffffff, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
 
         .nav-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .nav-item {
-            padding: 14px 18px;
-            border-radius: 14px;
+            padding: 12px 16px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.7);
+            color: #94a3b8;
             transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 14px;
-            font-size: 15px;
+            gap: 12px;
+            font-size: 14px;
         }
 
         .nav-item i {
-            font-size: 18px;
+            width: 18px;
+            height: 18px;
         }
 
         .nav-item:hover {
-            background: rgba(255, 255, 255, 0.08);
             color: white;
-            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .nav-item.active {
-            background: rgba(255, 255, 255, 0.15);
+            background: var(--primary);
             color: white;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(6, 78, 59, 0.25);
         }
 
         #logoutBtn {
             margin-top: auto;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
             padding: 12px;
             border-radius: 12px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
             transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         #logoutBtn:hover {
             background: #ef4444;
             color: white;
+            border-color: #ef4444;
         }
 
         /* --- Main Content --- */
         .main-wrapper {
             flex: 1;
-            margin-left: 280px;
-            padding: 50px;
-            max-width: 1400px;
+            margin-left: 260px;
+            padding: 40px 60px;
             width: 100%;
         }
 
-        .hero-section {
-            margin-bottom: 40px;
+        .top-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
+            margin-bottom: 48px;
         }
 
         .hero-text h1 {
-            font-size: 38px;
+            font-size: 32px;
             font-weight: 800;
             letter-spacing: -1px;
-            margin-bottom: 10px;
             color: var(--secondary);
+            margin-bottom: 4px;
         }
 
         .hero-text p {
             color: var(--text-muted);
-            font-size: 17px;
+            font-size: 15px;
+        }
+
+        /* --- Context Picker --- */
+        .school-picker {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid #e2e8f0;
+        }
+
+        .school-picker i {
+            color: var(--primary);
+        }
+
+        #schoolSelect {
+            border: none;
+            background: none;
+            font-weight: 700;
+            color: var(--secondary);
+            font-size: 14px;
+            padding-right: 24px;
+            cursor: pointer;
+            outline: none;
         }
 
         /* --- Glass Cards --- */
-        .glass-card {
+        .card {
             background: var(--surface);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
             border-radius: 24px;
-            padding: 40px;
+            padding: 32px;
             box-shadow: var(--shadow-lg);
             margin-bottom: 30px;
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* --- Form Elements --- */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .field-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            font-size: 14px;
+        /* --- Forms --- */
+        .form-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
             color: var(--secondary);
+        }
+
+        .form-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
         }
 
         input,
         select {
             width: 100%;
-            padding: 14px 20px;
-            border-radius: 16px;
-            border: 2px solid #e2e8f0;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
             background: white;
             font-family: inherit;
-            font-size: 15px;
+            font-size: 14px;
             transition: var(--transition);
         }
 
@@ -230,152 +257,94 @@
             box-shadow: 0 0 0 4px var(--primary-glow);
         }
 
-        /* Custom File Upload */
-        input[type="file"] {
-            padding: 10px;
-            background: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            cursor: pointer;
-        }
-
-        .action-btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        .btn-primary {
+            background: var(--primary);
             color: white;
-            padding: 16px 32px;
-            border-radius: 16px;
+            padding: 14px 24px;
+            border-radius: 12px;
             border: none;
-            font-size: 16px;
             font-weight: 700;
+            font-size: 14px;
             cursor: pointer;
             transition: var(--transition);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
-            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
+            width: 100%;
         }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3);
+        .btn-primary:hover {
+            background: var(--accent);
+            transform: translateY(-1px);
         }
 
-        .action-btn:active {
-            transform: translateY(0);
-        }
-
-        /* --- Alert Modules --- */
-        .info-panel {
-            background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
-            border-left: 5px solid var(--primary);
-            padding: 20px 25px;
-            border-radius: 16px;
-            margin-bottom: 30px;
-            font-size: 15px;
-            color: var(--secondary);
-            line-height: 1.6;
-        }
-
-        .result-toast {
-            margin-top: 30px;
-            padding: 25px;
-            border-radius: 20px;
-            display: none;
-            font-weight: 500;
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                scale: 0.9;
-            }
-
-            to {
-                opacity: 1;
-                scale: 1;
-            }
-        }
-
-        .result-toast.success {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-        }
-
-        .result-toast.error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        /* --- Specific Component Stylings --- */
-        .school-badge {
-            background: white;
-            padding: 10px 20px;
-            border-radius: 100px;
-            border: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            color: var(--secondary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .module-body {
+        /* --- Modules --- */
+        .module {
             display: none;
         }
 
-        .module-body.active {
+        .module.active {
             display: block;
-            animation: fadeIn 0.4s ease;
+            animation: fadeIn 0.3s ease;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
+                transform: translateY(10px);
             }
 
             to {
                 opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        .mapping-grid {
+        .info-box {
+            background: var(--primary-glow);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: var(--primary);
+            border: 1px solid rgba(6, 78, 59, 0.2);
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+
+        .toast {
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin-top: 24px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .toast.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .toast.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            gap: 24px;
         }
 
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: white;
-            padding: 15px 20px;
-            border-radius: 16px;
-            border: 2px solid #e2e8f0;
-            margin-bottom: 25px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .checkbox-container:hover {
-            border-color: var(--primary);
-        }
-
-        input[type="checkbox"] {
-            width: 22px;
-            height: 22px;
-            cursor: pointer;
-        }
-
-        @media (max-width: 1000px) {
+        @media (max-width: 1024px) {
             .sidebar {
                 width: 80px;
-                padding: 30px 15px;
             }
 
             .brand-name,
@@ -385,10 +354,10 @@
 
             .main-wrapper {
                 margin-left: 80px;
-                padding: 30px;
+                padding: 32px;
             }
 
-            .mapping-grid {
+            .grid-2 {
                 grid-template-columns: 1fr;
             }
         }
@@ -399,227 +368,369 @@
 
     <aside class="sidebar">
         <div class="brand">
-            <div class="brand-logo">S</div>
-            <div class="brand-name">SchoolApp</div>
+            <div class="brand-logo"><i data-lucide="zap"></i></div>
+            <div class="brand-name">BulkOps</div>
         </div>
 
         <nav class="nav-group" id="navItems" style="display: none;">
-            <div class="nav-item active" data-module="users" onclick="switchModule(this)">
-                <span>👥</span> <span class="nav-text">Administrative Staff</span>
+            <div class="nav-item active" data-module="schools_mgr" onclick="switchModule(this)">
+                <i data-lucide="building-2"></i> <span class="nav-text">Schools Registry</span>
+            </div>
+            <div class="nav-item" data-module="users" onclick="switchModule(this)">
+                <i data-lucide="users"></i> <span class="nav-text">Staff & Parents</span>
             </div>
             <div class="nav-item" data-module="sections" onclick="switchModule(this)">
-                <span>🏢</span> <span class="nav-text">School Sections</span>
+                <i data-lucide="layout"></i> <span class="nav-text">Sections</span>
             </div>
             <div class="nav-item" data-module="classes" onclick="switchModule(this)">
-                <span>🏫</span> <span class="nav-text">Academic Classes</span>
+                <i data-lucide="home"></i> <span class="nav-text">Classes</span>
             </div>
             <div class="nav-item" data-module="students" onclick="switchModule(this)">
-                <span>🎓</span> <span class="nav-text">Student Records</span>
+                <i data-lucide="graduation-cap"></i> <span class="nav-text">Students</span>
             </div>
             <div class="nav-item" data-module="mapping" onclick="switchModule(this)">
-                <span>🔗</span> <span class="nav-text">Entity Mapping</span>
+                <i data-lucide="git-branch"></i> <span class="nav-text">Relationships</span>
+            </div>
+            <div class="nav-item" data-module="super_sec" onclick="switchModule(this)"
+                style="border: 1px solid var(--primary); margin-top: 10px;">
+                <i data-lucide="zap"></i> <span class="nav-text" style="color: var(--accent);">Super Sections</span>
+            </div>
+            <div class="nav-item" data-module="ultimate_stu" onclick="switchModule(this)"
+                style="border: 1px solid var(--primary);">
+                <i data-lucide="rocket"></i> <span class="nav-text" style="color: var(--accent);">Ultimate Student
+                    Sync</span>
             </div>
             <div class="nav-item" data-module="fees" onclick="switchModule(this)">
-                <span>💰</span> <span class="nav-text">Financial Struct</span>
+                <i data-lucide="credit-card"></i> <span class="nav-text">Financials</span>
             </div>
         </nav>
 
-        <button id="logoutBtn" style="display: none;" onclick="logout()">Logout Portal</button>
+        <button id="logoutBtn" style="display: none;" onclick="logout()">
+            <i data-lucide="log-out"></i> <span class="nav-text">Terminate Session</span>
+        </button>
     </aside>
 
     <main class="main-wrapper">
-        <header class="hero-section">
+        <header class="top-bar">
             <div class="hero-text">
-                <h1>Bulk Operations</h1>
-                <p>Advanced ecosystem for automated institutional data migration.</p>
+                <h1 id="pageTitle">Security Gate</h1>
+                <p id="pageSub">Authenticating administrative access...</p>
             </div>
+
             <div id="schoolDisplay" style="display: none;">
-                <div class="school-badge">
-                    <span>🏛️</span>
-                    <select id="schoolSelect"
-                        style="border: none; padding: 0; background: transparent; font-weight: 700;">
-                        <option>Configuring...</option>
+                <div class="school-picker">
+                    <i data-lucide="school"></i>
+                    <select id="schoolSelect" onchange="updateContextDisplay()">
+                        <option>Loading Context...</option>
                     </select>
+                </div>
+                <div id="activeShortCode"
+                    style="margin-top: 8px; font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; background: var(--primary-glow); padding: 4px 12px; border-radius: 20px; display: inline-block;">
+                    ID Prefix: ---
                 </div>
             </div>
         </header>
 
-        <!-- PORTAL LOGIN -->
-        <section id="loginPanel" class="glass-card">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="font-size: 28px; margin-bottom: 10px;">Security Verification</h2>
-                <p style="color: var(--text-muted);">Enter administrative credentials to unlock bulk tools.</p>
+        <!-- LOGIN -->
+        <section id="loginPanel" class="card" style="max-width: 500px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <h2 class="form-title">Portal Access</h2>
+                <p class="form-desc">Provide your credentials to unlock bulk migration tools.</p>
             </div>
-            <form id="loginForm" style="max-width: 450px; margin: 0 auto;">
-                <div style="margin-bottom: 20px;">
-                    <label class="field-label">System Email</label>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label class="label">System Email</label>
                     <input type="email" id="loginEmail" required placeholder="admin@daynapp.com">
                 </div>
-                <div style="margin-bottom: 30px;">
-                    <label class="field-label">Access Token</label>
+                <div class="input-group">
+                    <label class="label">Access Token</label>
                     <input type="password" id="loginPassword" required placeholder="••••••••">
                 </div>
-                <button type="submit" class="action-btn">Initialize Connection</button>
+                <button type="submit" class="btn-primary">Initialize Connection</button>
             </form>
-            <div id="loginResult" class="result-toast"></div>
+            <div id="loginResult" class="toast"></div>
         </section>
 
-        <!-- USERS MODULE -->
-        <section id="users" class="module-body active glass-card" style="display: none;">
-            <div style="margin-bottom: 30px;">
-                <h2 style="font-size: 26px;">Import Human Resources</h2>
-                <p style="color: var(--text-muted);">Sync teachers, parents, and administrative staff members.</p>
-            </div>
+        <!-- SCHOOLS MANAGEMENT -->
+        <div id="schools_mgr" class="module active" style="display: none;">
+            <section class="card">
+                <h2 class="form-title">Institutional Registry</h2>
+                <p class="form-desc">Create or update schools. The Short Code is the master key for all generated IDs.
+                </p>
 
-            <div class="info-panel">
-                <strong>Data Structure:</strong> Requires [name, email, phone (optional)].<br>
-                Security protocols will assign a temporary password ('password123') to all new accounts.
-            </div>
-
-            <form id="usersForm">
-                <div class="form-grid">
+                <form id="schoolMgmtForm" class="grid-2">
+                    <input type="hidden" id="mgmt_school_id">
+                    <div class="input-group">
+                        <label class="label">Legal Name</label>
+                        <input type="text" id="mgmt_school_name" placeholder="e.g. Dayn Academy" required>
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Short Code (Unique ID Prefix)</label>
+                        <input type="text" id="mgmt_school_code" placeholder="e.g. DAYN" maxlength="10" required>
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Contact Phone</label>
+                        <input type="text" id="mgmt_school_phone">
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Official Email</label>
+                        <input type="email" id="mgmt_school_email">
+                    </div>
+                    <div class="input-group" style="grid-column: span 2;">
+                        <label class="label">Campus Address</label>
+                        <input type="text" id="mgmt_school_address">
+                    </div>
+                    <div style="grid-column: span 2; display: flex; gap: 12px;">
+                        <button type="submit" class="btn-primary" style="flex: 1;"><i data-lucide="save"></i> Save
+                            Institution</button>
+                        <button type="button" class="btn-primary" style="flex: 1; background: #64748b;"
+                            onclick="resetSchoolForm()"><i data-lucide="plus"></i> New School</button>
+                    </div>
+                </form>
+                <div id="schoolMgmtResult" class="toast"></div>
+            </section>
+        </div>
+        <div id="users" class="module">
+            <section class="card">
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+                    <div
+                        style="padding: 12px; background: var(--primary-glow); border-radius: 14px; color: var(--primary);">
+                        <i data-lucide="users"></i>
+                    </div>
                     <div>
-                        <label class="field-label">Deployment Role</label>
-                        <select id="userRole">
-                            <option value="principal">Principal</option>
-                            <option value="bursar">Bursar</option>
-                            <option value="teacher">Teacher</option>
-                            <option value="parent">Parent</option>
+                        <h2 class="form-title" style="margin-bottom: 4px;">Staff & Parent Import</h2>
+                        <p class="form-desc" style="margin-bottom: 0;">Bulk create system accounts with their
+                            corresponding base roles.</p>
+                    </div>
+                </div>
+
+                <div class="info-box" style="margin-top: 24px;">
+                    <strong>CSV Requirements:</strong> [name, email, phone (optional), address (optional), section
+                    (optional, use '|' for multiple)].<br>
+                    Accounts are automatically seeded with 'password123' as default credentials.
+                </div>
+
+                <form id="usersForm" class="grid-2" style="gap: 24px;">
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label class="label">Primary Role Assignment</label>
+                        <select id="userRole" style="padding: 16px; border-radius: 16px; font-weight: 500;">
+                            <option value="principal">👨‍🏫 Principal (Section Admin)</option>
+                            <option value="bursar">💰 Bursar (Financial Dept)</option>
+                            <option value="teacher">📚 Teacher (Academic Staff)</option>
+                            <option value="parent">👪 Parent (Ward Observer)</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="field-label">Source CSV</label>
-                        <input type="file" id="usersFile" accept=".csv" required>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label class="label">Data Source (CSV Dataset)</label>
+                        <div
+                            style="position: relative; border: 2px dashed var(--primary); border-radius: 16px; padding: 16px; text-align: center; background: var(--primary-glow); cursor: pointer; transition: var(--transition);">
+                            <i data-lucide="file-spreadsheet"
+                                style="width: 24px; height: 24px; color: var(--primary); margin-bottom: 4px;"></i>
+                            <div style="font-weight: 600; font-size: 13px; color: var(--primary);">Select CSV File</div>
+                            <input type="file" id="usersFile" accept=".csv" required
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                        </div>
                     </div>
+                    <div style="grid-column: span 2; margin-top: 8px;">
+                        <button type="submit" class="btn-primary"
+                            style="padding: 16px; font-size: 15px; border-radius: 16px;">
+                            <i data-lucide="upload-cloud"></i> Execute Import Sequence
+                        </button>
+                    </div>
+                </form>
+                <div id="usersResult" class="toast"></div>
+            </section>
+        </div>
+
+        <!-- SECTIONS -->
+        <div id="sections" class="module">
+            <section class="card">
+                <h2 class="form-title">Academic Sections</h2>
+                <p class="form-desc">Define school subdivisions like Primary or Senior High.</p>
+                <div class="info-box"><strong>Headers:</strong> section_name, description, is_active</div>
+                <form id="sectionsForm">
+                    <div class="input-group">
+                        <label class="label">Upload Manifest</label>
+                        <input type="file" id="sectionsFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Register Sections</button>
+                </form>
+                <div id="sectionsResult" class="toast"></div>
+            </section>
+        </div>
+
+        <!-- CLASSES -->
+        <div id="classes" class="module">
+            <section class="card">
+                <h2 class="form-title">Grade Levels</h2>
+                <p class="form-desc">Map classes to their respective school sections.</p>
+                <div class="info-box"><strong>Headers:</strong> class_name, section_id, capacity</div>
+                <form id="classesForm">
+                    <div class="input-group">
+                        <label class="label">Class Definition CSV</label>
+                        <input type="file" id="classesFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Sync Class Architecture</button>
+                </form>
+                <div id="classesResult" class="toast"></div>
+            </section>
+        </div>
+
+        <!-- STUDENTS -->
+        <div id="students" class="module">
+            <section class="card">
+                <h2 class="form-title">Student Population Sync</h2>
+                <p class="form-desc">Integrated import that auto-generates missing structures.</p>
+                <div class="info-box">
+                    <strong>Structure:</strong> section_name (Can use '|' for multiple, e.g. Primary|Secondary),
+                    class_name, first_name, last_name, admission_number...
                 </div>
-                <button type="submit" class="action-btn">⚡ Execute Migration</button>
-            </form>
-            <div id="usersResult" class="result-toast"></div>
-        </section>
+                <form id="studentsForm">
+                    <div class="input-group"
+                        style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                            <input type="checkbox" id="autoAssignFees" checked style="width: 20px; height: 20px;">
+                            <span style="font-size: 14px; font-weight: 500;">Automate Financial Binding (Assign fees on
+                                import)</span>
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Core Student Data</label>
+                        <input type="file" id="studentsFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary">🚀 Begin High-Speed Migration</button>
+                </form>
+                <div id="studentsResult" class="toast"></div>
+            </section>
+        </div>
 
-        <!-- SECTIONS MODULE -->
-        <section id="sections" class="module-body glass-card">
-            <h2 style="margin-bottom: 10px;">School Sections</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Architecture setup for school blocks (e.g.,
-                Primary, Junior Secondary).</p>
-            <div class="info-panel"><strong>Headers:</strong> section_name, description, is_active</div>
-            <form id="sectionsForm">
-                <div style="margin-bottom: 30px;">
-                    <label class="field-label">Select File</label>
-                    <input type="file" id="sectionsFile" accept=".csv" required>
-                </div>
-                <button type="submit" class="action-btn">Deploy Structure</button>
-            </form>
-            <div id="sectionsResult" class="result-toast"></div>
-        </section>
-
-        <!-- CLASSES MODULE -->
-        <section id="classes" class="module-body glass-card">
-            <h2 style="margin-bottom: 10px;">Academic Classes</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Generate grade levels and assign them to specific
-                sections.</p>
-            <div class="info-panel"><strong>Headers:</strong> class_name, section_id, capacity</div>
-            <form id="classesForm">
-                <div style="margin-bottom: 30px;">
-                    <label class="field-label">Select File</label>
-                    <input type="file" id="classesFile" accept=".csv" required>
-                </div>
-                <button type="submit" class="action-btn">Sync Classes</button>
-            </form>
-            <div id="classesResult" class="result-toast"></div>
-        </section>
-
-        <!-- STUDENTS MODULE -->
-        <section id="students" class="module-body glass-card">
-            <h2 style="margin-bottom: 10px;">Smart Student Sync</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Intelligent "All-in-One" migration including
-                automated class creation.</p>
-
-            <div class="info-panel">
-                <strong>Headers:</strong> section_name, class_name, first_name, last_name, admission_number, dob,
-                gender<br>
-                <em>Note: Missing sections/classes will be generated on-the-fly.</em>
-            </div>
-
-            <form id="studentsForm">
-                <label class="checkbox-container">
-                    <input type="checkbox" id="autoAssignFees" checked>
-                    <span>Enable <strong>Auto-Financial Binding</strong> (Generate fee bills immediately)</span>
-                </label>
-                <div style="margin-bottom: 30px;">
-                    <label class="field-label">Source Student Data (CSV)</label>
-                    <input type="file" id="studentsFile" accept=".csv" required>
-                </div>
-                <button type="submit" class="action-btn">🚀 Launch Student Import</button>
-            </form>
-            <div id="studentsResult" class="result-toast"></div>
-        </section>
-
-        <!-- MAPPING MODULE -->
-        <section id="mapping" class="module-body glass-card">
-            <h2 style="margin-bottom: 10px;">Relationship Mapping</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Establish complex database relationships via CSV.
-            </p>
-
-            <div class="mapping-grid">
-                <div
-                    style="background: rgba(248, 250, 252, 0.5); padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0;">
-                    <h3 style="margin-bottom: 15px;">Parent ⟷ Student</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Use [parent_email,
-                        student_admission_number].</p>
+        <!-- MAPPING -->
+        <div id="mapping" class="module">
+            <div class="grid-2">
+                <section class="card">
+                    <h2 class="form-title">Family Binding</h2>
+                    <p class="form-desc">Link students to their parents via email mapping.</p>
                     <form id="mapParentsForm">
-                        <input type="file" id="parentMapFile" accept=".csv" required style="margin-bottom: 15px;">
-                        <button type="submit" class="action-btn" style="padding: 12px; font-size: 14px;">Bind
-                            Relationships</button>
+                        <div class="input-group">
+                            <label class="label">Mapping CSV</label>
+                            <input type="file" id="parentMapFile" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Bind Relationships</button>
                     </form>
-                    <div id="parentMapResult" class="result-toast"></div>
-                </div>
+                    <div id="parentMapResult" class="toast"></div>
+                </section>
 
-                <div
-                    style="background: rgba(248, 250, 252, 0.5); padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0;">
-                    <h3 style="margin-bottom: 15px;">Teacher ⟷ Class</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Use [teacher_email,
-                        class_id].</p>
+                <section class="card">
+                    <h2 class="form-title">Teacher Assignment</h2>
+                    <p class="form-desc">Designate form teachers for specific class groups.</p>
                     <form id="assignTeachersForm">
-                        <input type="file" id="teacherAssignFile" accept=".csv" required style="margin-bottom: 15px;">
-                        <button type="submit" class="action-btn" style="padding: 12px; font-size: 14px;">Assign
-                            Teachers</button>
+                        <div class="input-group">
+                            <label class="label">Assignment CSV</label>
+                            <input type="file" id="teacherAssignFile" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Assign Teachers</button>
                     </form>
-                    <div id="teacherAssignResult" class="result-toast"></div>
-                </div>
+                    <div id="teacherAssignResult" class="toast"></div>
+                </section>
             </div>
-        </section>
+        </div>
 
-        <!-- FEES MODULE -->
-        <section id="fees" class="module-body glass-card">
-            <h2 style="margin-bottom: 10px;">Financial Structure</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Global and class-specific fee templates.</p>
-            <div class="info-panel">
-                <strong>Schema:</strong> [fee_name, amount, fee_scope, session_id, term_id, section_id, class_id]<br>
-                <em>Scopes allowable: school | section | class</em>
-            </div>
-            <form id="feesForm">
-                <div style="margin-bottom: 30px;">
-                    <label class="field-label">Deployment File</label>
-                    <input type="file" id="feesFile" accept=".csv" required>
+        <!-- SUPER SECTIONS -->
+        <div id="super_sec" class="module">
+            <section class="card">
+                <h2 class="form-title">Super Section Deployment</h2>
+                <p class="form-desc">Define sections and their administrative leaders (Principal & Bursar) in one pass.
+                </p>
+                <div class="info-box">
+                    <strong>Columns:</strong> section_name, description, principal_email, principal_name, bursar_email,
+                    bursar_name
                 </div>
-                <button type="submit" class="action-btn">Initialize Billing</button>
-            </form>
-            <div id="feesResult" class="result-toast"></div>
-        </section>
+                <form id="superSecForm">
+                    <div class="input-group">
+                        <label class="label">Section & Admin CSV</label>
+                        <input type="file" id="superSecFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary">⚡ Deploy Administrative Blocks</button>
+                </form>
+                <div id="superSecResult" class="toast"></div>
+            </section>
+        </div>
+
+        <!-- ULTIMATE STUDENTS -->
+        <div id="ultimate_stu" class="module">
+            <section class="card">
+                <div
+                    style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 32px; border-radius: 20px; color: white; margin-bottom: 24px;">
+                    <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">🚀 Ultimate Student Migration
+                    </h2>
+                    <p style="opacity: 0.9; font-size: 15px;">The most powerful importer. <b>One row</b> creates the
+                        Section, Class, Form Teacher, Student, and Parent accounts while linking them all together.</p>
+                </div>
+                <div class="info-box" style="background: white; border: 1px solid #e2e8f0;">
+                    <strong style="color: var(--primary);">Master Headers:</strong><br>
+                    section_name, class_name, teacher_email, teacher_name, student_first_name, student_last_name,
+                    admission_number, parent_name, parent_email, parent_phone
+                </div>
+                <form id="ultimateStuForm">
+                    <div class="input-group">
+                        <label class="label">Full Institution Mapping CSV</label>
+                        <input type="file" id="ultimateStuFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background: #6366f1;">Initialize Master
+                        Synchronization</button>
+                </form>
+                <div id="ultimateStuResult" class="toast"></div>
+            </section>
+        </div>
+
+        <!-- FEES -->
+        <div id="fees" class="module">
+            <section class="card">
+                <h2 class="form-title">Fee Categorization</h2>
+                <p class="form-desc">Setup financial structures for terms and grade levels.</p>
+                <div class="info-box">
+                    <strong>Scopes:</strong> global | section | class
+                </div>
+                <form id="feesForm">
+                    <div class="input-group">
+                        <label class="label">Fee Template manifest</label>
+                        <input type="file" id="feesFile" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Initialize Billing System</button>
+                </form>
+                <div id="feesResult" class="toast"></div>
+            </section>
+        </div>
     </main>
 
     <script>
         const API_URL = "https://school-api.daynapp.com/api";
         let authToken = "";
 
+        lucide.createIcons();
+
         function switchModule(el) {
             const modId = el.getAttribute('data-module');
-            document.querySelectorAll('.module-body').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
             document.getElementById(modId).classList.add('active');
 
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
+
+            const pageTitle = {
+                'schools_mgr': 'Institutional Registry',
+                'users': 'Staff & Parents',
+                'sections': 'School Sections',
+                'classes': 'Academic Classes',
+                'students': 'Student Migration',
+                'mapping': 'Entity Relationships',
+                'super_sec': 'Rapid Administration Deployment',
+                'ultimate_stu': 'Master Multi-Entity Synchronization',
+                'fees': 'Financial Structuring'
+            }[modId];
+
+            document.getElementById('pageTitle').innerText = pageTitle;
+            document.getElementById('pageSub').innerText = 'Institutional data management & bulk synchronization.';
         }
 
         const loginForm = document.getElementById('loginForm');
@@ -631,8 +742,8 @@
             const password = document.getElementById('loginPassword').value;
 
             loginResult.style.display = 'block';
-            loginResult.className = 'result-toast';
-            loginResult.innerHTML = 'Connecting to Secure Server...';
+            loginResult.className = 'toast';
+            loginResult.innerHTML = 'Verifying credentials...';
 
             try {
                 const response = await fetch(`${API_URL}/auth/login`, {
@@ -642,24 +753,27 @@
                 });
 
                 const res = await response.json();
-                if (!response.ok) throw new Error(res.message || 'Verification failed');
+                if (!response.ok) throw new Error(res.message || 'Login failed');
 
                 authToken = res.data.token;
 
-                // Portal Entry
                 document.getElementById('loginPanel').style.display = 'none';
                 document.getElementById('navItems').style.display = 'flex';
-                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'flex';
                 document.getElementById('schoolDisplay').style.display = 'block';
-                document.getElementById('users').style.display = 'block';
+                document.getElementById('schools_mgr').style.display = 'block';
+
+                document.getElementById('pageTitle').innerText = 'Institutional Registry';
+                document.getElementById('pageSub').innerText = 'Master management for school profiles and short codes.';
 
                 fetchSchools();
             } catch (err) {
-                loginResult.className = 'result-toast error';
-                loginResult.innerHTML = `<strong>Access Denied:</strong> ${err.message}`;
+                loginResult.className = 'toast error';
+                loginResult.innerHTML = `<strong>Verification failed:</strong> ${err.message}`;
             }
         });
 
+        let globalSchools = [];
         async function fetchSchools() {
             const schoolSelect = document.getElementById('schoolSelect');
             try {
@@ -667,12 +781,82 @@
                     headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' }
                 });
                 const res = await response.json();
-                const schools = res.data.data || res.data;
-                schoolSelect.innerHTML = schools.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                globalSchools = res.data.data || res.data;
+                schoolSelect.innerHTML = globalSchools.map(s => `<option value="${s.id}" data-code="${s.short_code}">${s.name} [${s.short_code}]</option>`).join('');
+                updateContextDisplay();
             } catch (err) {
-                schoolSelect.innerHTML = '<option value="">Network Error</option>';
+                schoolSelect.innerHTML = '<option value="">Fetch Error</option>';
             }
         }
+
+        function updateContextDisplay() {
+            const schoolSelect = document.getElementById('schoolSelect');
+            const selectedOption = schoolSelect.options[schoolSelect.selectedIndex];
+            if (selectedOption) {
+                const code = selectedOption.getAttribute('data-code');
+                document.getElementById('activeShortCode').innerText = `ID Prefix: ${code}`;
+
+                // If we are in management module, fill the form
+                const schoolId = schoolSelect.value;
+                const school = globalSchools.find(s => s.id == schoolId);
+                if (school && document.getElementById('schools_mgr').classList.contains('active')) {
+                    document.getElementById('mgmt_school_id').value = school.id;
+                    document.getElementById('mgmt_school_name').value = school.name;
+                    document.getElementById('mgmt_school_code').value = school.short_code;
+                    document.getElementById('mgmt_school_phone').value = school.phone || '';
+                    document.getElementById('mgmt_school_email').value = school.email || '';
+                    document.getElementById('mgmt_school_address').value = school.address || '';
+                }
+            }
+        }
+
+        function resetSchoolForm() {
+            document.getElementById('mgmt_school_id').value = '';
+            document.getElementById('schoolMgmtForm').reset();
+        }
+
+        document.getElementById('schoolMgmtForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('mgmt_school_id').value;
+            const resultBox = document.getElementById('schoolMgmtResult');
+
+            const payload = {
+                name: document.getElementById('mgmt_school_name').value,
+                short_code: document.getElementById('mgmt_school_code').value,
+                phone: document.getElementById('mgmt_school_phone').value,
+                email: document.getElementById('mgmt_school_email').value,
+                address: document.getElementById('mgmt_school_address').value,
+            };
+
+            resultBox.style.display = 'block';
+            resultBox.className = 'toast';
+            resultBox.innerText = 'Syncing institution...';
+
+            try {
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `${API_URL}/schools/${id}` : `${API_URL}/schools`;
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Saving failed');
+
+                resultBox.className = 'toast success';
+                resultBox.innerText = data.message;
+                fetchSchools();
+            } catch (err) {
+                resultBox.className = 'toast error';
+                resultBox.innerText = `Error: ${err.message}`;
+            }
+        });
 
         function logout() { location.reload(); }
 
@@ -686,11 +870,11 @@
                 const resultBox = document.getElementById(resultBoxId);
                 const fileInput = document.getElementById(fileInputId);
 
-                if (!schoolId) return alert('Select institutional context first.');
+                if (!schoolId) return alert('Select institutional context.');
 
                 resultBox.style.display = 'block';
-                resultBox.className = 'result-toast';
-                resultBox.innerHTML = '⏳ Processing Data Stream...';
+                resultBox.className = 'toast';
+                resultBox.innerHTML = '⚡ Processing data stream...';
 
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
@@ -708,20 +892,20 @@
                     });
 
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.message || 'Process Interrupted');
+                    if (!response.ok) throw new Error(data.message || 'Error occurred');
 
-                    resultBox.className = 'result-toast success';
-                    resultBox.innerHTML = `<strong>✅ Migration Success</strong><br>${data.message}`;
+                    resultBox.className = 'toast success';
+                    resultBox.innerHTML = `<strong>Import Complete</strong><br>${data.message}`;
 
                     const count = data.imported_count || data.mapped_count;
-                    if (count) resultBox.innerHTML += `<br>Entities Processed: ${count}`;
+                    if (count) resultBox.innerHTML += `<br>Entities synced: ${count}`;
 
                     if (data.errors && data.errors.length) {
-                        resultBox.innerHTML += `<div style="margin-top:10px; font-size:12px; opacity:0.8;">⚠️ Warnings:<br>${data.errors.join('<br>')}</div>`;
+                        resultBox.innerHTML += `<div style="margin-top:8px; font-size:12px;">⚠️ ${data.errors.length} issues reported.</div>`;
                     }
                 } catch (err) {
-                    resultBox.className = 'result-toast error';
-                    resultBox.innerHTML = `<strong>❌ Critical Error:</strong> ${err.message}`;
+                    resultBox.className = 'toast error';
+                    resultBox.innerHTML = `<strong>System Error:</strong> ${err.message}`;
                 }
             });
         }
@@ -738,6 +922,8 @@
         bootstrapUpload('feesForm', '/import/fees', 'feesFile', 'feesResult');
         bootstrapUpload('mapParentsForm', '/import/map-parents', 'parentMapFile', 'parentMapResult');
         bootstrapUpload('assignTeachersForm', '/import/assign-teachers', 'teacherAssignFile', 'teacherAssignResult');
+        bootstrapUpload('superSecForm', '/import/super-sections', 'superSecFile', 'superSecResult');
+        bootstrapUpload('ultimateStuForm', '/import/ultimate-students', 'ultimateStuFile', 'ultimateStuResult');
 
     </script>
 </body>

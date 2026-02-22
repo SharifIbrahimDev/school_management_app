@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
+import '../../widgets/loading_indicator.dart';
 import 'main_app.dart';
 
 class DashboardWrapper extends StatelessWidget {
@@ -14,9 +15,7 @@ class DashboardWrapper extends StatelessWidget {
         final userMap = authService.currentUser;
 
         if (userMap == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const LoadingIndicator(isFullPage: true, message: 'Authenticating...');
         }
 
         final user = UserModel.fromMap(userMap);

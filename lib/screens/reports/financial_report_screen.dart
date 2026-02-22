@@ -4,6 +4,8 @@ import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/report_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/utils/formatters.dart';
 
 class FinancialReportScreen extends StatefulWidget {
   const FinancialReportScreen({super.key});
@@ -58,7 +60,7 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
     if (_isLoading) {
       return const Scaffold(
         appBar: CustomAppBar(title: 'Financial Reports'),
-        body: Center(child: CircularProgressIndicator()),
+        body: LoadingIndicator(isFullPage: true, message: 'Loading financial reports...'),
       );
     }
     
@@ -217,7 +219,7 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
             Text(title, style: TextStyle(color: Colors.grey[700], fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text(
-              '₦${(value ?? 0).toStringAsFixed(0)}',
+              Formatters.formatCurrency((value ?? 0).toDouble()),
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
             ),
           ],

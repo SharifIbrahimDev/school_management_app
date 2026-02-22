@@ -4,6 +4,7 @@ import '../core/utils/preferences_manager.dart';
 import 'auth/auth_wrapper.dart';
 import 'onboarding/onboarding_screen.dart';
 import '../core/utils/app_theme.dart';
+import '../widgets/loading_indicator.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -148,8 +149,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   const SizedBox(height: 64),
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: const LoadingIndicator(
+                      color: Colors.white,
                     ),
                   ),
                 ],
