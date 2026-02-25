@@ -9,6 +9,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/empty_state_widget.dart'; // Added
 import 'add_homework_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class TeacherHomeworkScreen extends StatefulWidget {
   const TeacherHomeworkScreen({super.key});
@@ -51,7 +52,7 @@ class _TeacherHomeworkScreenState extends State<TeacherHomeworkScreen> {
     } catch (e) {
       if (mounted) {
          setState(() => _isLoading = false);
-         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading filters: $e')));
+         AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

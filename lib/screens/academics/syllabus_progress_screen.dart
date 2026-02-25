@@ -10,6 +10,7 @@ import '../../core/models/class_model.dart';
 import '../../core/models/subject_model.dart';
 import 'add_syllabus_topic_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class SyllabusProgressScreen extends StatefulWidget {
   const SyllabusProgressScreen({super.key});
@@ -113,9 +114,11 @@ class _SyllabusProgressScreenState extends State<SyllabusProgressScreen> {
         'status': nextStatus,
         'completion_date': nextStatus == 'completed' ? DateTime.now().toIso8601String() : null,
       });
+      if (!mounted) return;
       await _loadSyllabus();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+      if (!mounted) return;
+      AppSnackbar.friendlyError(context, error: e);
     }
   }
 

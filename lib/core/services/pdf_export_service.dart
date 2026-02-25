@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -94,6 +95,146 @@ class PdfExportService {
     await Printing.layoutPdf(
       onLayout: (format) async => pdf.save(),
       name: 'Transaction_Report_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
+  }
+
+  /// Generate a detailed Executive Analytics Report with Charts
+  Future<void> exportAnalyticsReport({
+    required String schoolName,
+    required double totalIncome,
+    required double totalExpense,
+    required double netProfit,
+    required double collectedRevenue,
+    required double outstandingRevenue,
+    required List<Map<String, dynamic>> recentTransactions,
+    Uint8List? growthChartImage,
+    Uint8List? collectionChartImage,
+  }) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(base: font, bold: boldFont),
+        build: (context) => [
+          _buildHeader(schoolName),
+          pw.SizedBox(height: 20),
+          pw.Text('Executive Financial Analytics', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+          pw.Text('Report Date: ${dateFormat.format(DateTime.now())}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+          pw.SizedBox(height: 24),
+
+          // Primary Summary
+          pw.Row(
+            children: [
+              pw.Expanded(child: _buildSummaryCard('Total Income', totalIncome, PdfColors.green)),
+              pw.SizedBox(width: 12),
+              pw.Expanded(child: _buildSummaryCard('Total Expense', totalExpense, PdfColors.red)),
+              pw.SizedBox(width: 12),
+              pw.Expanded(child: _buildSummaryCard('Net Profit', netProfit, PdfColors.blue)),
+            ],
+          ),
+          pw.SizedBox(height: 32),
+
+          // Charts Section
+          if (growthChartImage != null || collectionChartImage != null) ...[
+            pw.Text('Visual Analysis', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 12),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                if (growthChartImage != null)
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Column(
+                      children: [
+                        pw.Text('Income vs Expense Trend', style: const pw.TextStyle(fontSize: 10)),
+                        pw.SizedBox(height: 8),
+                        pw.Image(pw.MemoryImage(growthChartImage), height: 200),
+                      ],
+                    ),
+                  ),
+                if (growthChartImage != null && collectionChartImage != null) pw.SizedBox(width: 20),
+                if (collectionChartImage != null)
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Column(
+                      children: [
+                        pw.Text('Collection Status', style: const pw.TextStyle(fontSize: 10)),
+                        pw.SizedBox(height: 8),
+                        pw.Image(pw.MemoryImage(collectionChartImage), height: 200),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            pw.SizedBox(height: 32),
+          ],
+
+          // Collection Details
+          pw.Text('Fee Collection Summary', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 12),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300),
+            children: [
+              _buildSimpleTableRow('Collected Revenue', currencyFormat.format(collectedRevenue), PdfColors.green),
+              _buildSimpleTableRow('Outstanding Revenue', currencyFormat.format(outstandingRevenue), PdfColors.red),
+              _buildSimpleTableRow('Total Expected', currencyFormat.format(collectedRevenue + outstandingRevenue), PdfColors.black),
+            ],
+          ),
+          pw.SizedBox(height: 32),
+
+          // Recent Activity
+          pw.Text('Recent Transactions', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 12),
+          _buildRecentTransactionsTable(recentTransactions),
+          
+          pw.SizedBox(height: 32),
+          _buildFooter(),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+      name: 'Executive_Analytics_${DateTime.now().millisecondsSinceEpoch}.pdf',
+    );
+  }
+
+  pw.TableRow _buildSimpleTableRow(String label, String value, PdfColor color) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(label)),
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(value, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: color), textAlign: pw.TextAlign.right),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildRecentTransactionsTable(List<Map<String, dynamic>> transactions) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _buildTableCell('Category', isHeader: true),
+            _buildTableCell('Description', isHeader: true),
+            _buildTableCell('Amount', isHeader: true),
+          ],
+        ),
+        ...transactions.map((t) => pw.TableRow(
+          children: [
+            _buildTableCell(t['category'] ?? 'Fee'),
+            _buildTableCell(t['description'] ?? '-'),
+            _buildTableCell(currencyFormat.format((t['amount'] as num?)?.toDouble() ?? 0), isBold: true),
+          ],
+        )),
+      ],
     );
   }
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_paystack/flutter_paystack.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import '../../core/services/payment_service_api.dart';
+import '../../core/services/payment_service.dart';
 import '../../core/services/receipt_service.dart';
 import '../../core/services/student_service_api.dart';
 import '../../core/services/fee_service_api.dart';
@@ -15,6 +15,7 @@ import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../core/utils/formatters.dart';
+import '../../widgets/app_snackbar.dart';
 
 class PaymentsScreen extends StatefulWidget {
   final int? studentId; // If provided, shows history for this student
@@ -26,10 +27,6 @@ class PaymentsScreen extends StatefulWidget {
 }
 
 class _PaymentsScreenState extends State<PaymentsScreen> {
-  final _paystackPlugin = PaystackPlugin();
-  // TODO: Move to a secure config or fetch from backend if possible (Paystack public key is generally safe on frontend)
-  final String _publicKey = 'pk_test_1c373f21b500aa97766871c8a5ce529f953d014d'; 
-  
   bool _isLoading = true;
   String? _error;
   List<PaymentModel> _payments = [];
@@ -37,7 +34,6 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   void initState() {
     super.initState();
-    _paystackPlugin.initialize(publicKey: _publicKey);
     _loadPayments();
   }
 
@@ -79,88 +75,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _processPayment(double amount, String email, int studentId, int feeId) async {
-    try {
-      final service = Provider.of<PaymentServiceApi>(context, listen: false);
-      
-      // 1. Initialize on Backend (get reference)
-      final initData = await service.initializePayment(
-        studentId: studentId,
-        feeId: feeId,
-        amount: amount,
-        email: email,
-      );
-      
-      final String reference = initData['reference'];
-      final String accessCode = initData['access_code']; // If backend generates access code
-
-      if (!mounted) return;
-
-      // 2. Launch Paystack Plugin
-      Charge charge = Charge()
-        ..amount = (amount * 100).toInt() // In kobo
-        ..email = email
-        ..accessCode = accessCode
-        ..reference = reference;
-
-      CheckoutResponse response = await _paystackPlugin.checkout(
-        context,
-        charge: charge,
-        method: CheckoutMethod.card, // Defaults to card, can be selectable
-        fullscreen: true,
-      );
-
-      if (response.status) {
-        // 3. Verify on Backend
-        await _verifyPayment(reference);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment cancelled or failed')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment Error: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _verifyPayment(String reference) async {
-    try {
-      // Show verifying dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
-      final service = Provider.of<PaymentServiceApi>(context, listen: false);
-      await service.verifyPayment(reference: reference);
-
-      if (!mounted) return;
-      
-      Navigator.pop(context); // Close loading dialog
-      
-      // Show success
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment Successful!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      _loadPayments(); // Refresh list
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Verification failed: $e')),
-        );
-      }
-    }
+    await PaymentService.processPayment(
+      context: context,
+      amount: amount,
+      email: email,
+      studentId: studentId,
+      feeId: feeId,
+      onSuccess: (reference) {
+        _loadPayments(); // Refresh list on success
+      },
+    );
   }
 
   @override
@@ -309,10 +233,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       );
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading if error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating receipt: $e')),
-        );
+        Navigator.pop(context);
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

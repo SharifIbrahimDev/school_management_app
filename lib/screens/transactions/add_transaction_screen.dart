@@ -129,7 +129,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       if (mounted) {
         AppSnackbar.showSuccess(context, message: 'Transaction added successfully');
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -141,7 +141,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final categories = _transactionType == 'credit' ? _creditCategories : _debitCategories;
 
     // Reset category if not in current list

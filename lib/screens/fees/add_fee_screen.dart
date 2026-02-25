@@ -13,6 +13,7 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/success_sheet.dart';
 
 class AddFeeScreen extends StatefulWidget {
   final String sectionId;
@@ -167,8 +168,12 @@ class _AddFeeScreenState extends State<AddFeeScreen> {
       );
 
       if (mounted) {
-        AppSnackbar.showSuccess(context, message: 'Fee created successfully');
-        Navigator.pop(context);
+        SuccessSheet.show(
+          context,
+          title: 'Fee Created',
+          message: 'The new fee "${_nameController.text.trim()}" has been successfully assigned to the selected scope.',
+          onButtonPressed: () => Navigator.pop(context),
+        );
       }
     } catch (e) {
       if (mounted) {

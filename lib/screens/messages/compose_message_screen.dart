@@ -4,6 +4,7 @@ import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/message_model.dart';
 import '../../core/services/message_service_api.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ComposeMessageScreen extends StatefulWidget {
   final UserSelectModel? initialRecipient;
@@ -50,9 +51,7 @@ class _ComposeMessageScreenState extends State<ComposeMessageScreen> {
   Future<void> _sendMessage() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedRecipient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a recipient')),
-      );
+      AppSnackbar.showWarning(context, message: 'Please select a recipient.');
       return;
     }
 
@@ -67,16 +66,12 @@ class _ComposeMessageScreenState extends State<ComposeMessageScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message sent successfully')),
-        );
+        AppSnackbar.showSuccess(context, message: 'Message sent successfully!');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
         setState(() => _isLoading = false);
       }
     }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../widgets/custom_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +7,7 @@ import '../../core/services/message_service_api.dart';
 import '../../core/models/message_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/app_snackbar.dart';
 import 'chat_screen.dart';
 import 'contact_picker_screen.dart';
 
@@ -31,19 +32,16 @@ class _ParentChatListScreenState extends State<ParentChatListScreen> {
     try {
       final service = Provider.of<MessageServiceApi>(context, listen: false);
       final data = await service.getConversations();
-      if (mounted) {
+      if (context.mounted) {
         setState(() {
           _conversations = data;
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading chats: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppSnackbar.friendlyError(context, error: e);
     }
   }
 
@@ -170,7 +168,7 @@ class _ParentChatListScreenState extends State<ParentChatListScreen> {
             MaterialPageRoute(builder: (_) => const ContactPickerScreen()),
           );
 
-          if (!mounted) return;
+          if (!context.mounted) return;
 
           if (result != null && result is Map<String, dynamic>) {
             // result is user map

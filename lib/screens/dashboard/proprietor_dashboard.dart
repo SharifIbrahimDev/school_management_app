@@ -12,14 +12,22 @@ import '../../core/services/class_service_api.dart';
 import '../../core/services/transaction_service_api.dart';
 import '../../core/services/dashboard_filter_service.dart';
 import '../../core/services/attendance_service_api.dart';
+import '../../core/services/fee_service_api.dart'; // Added FeeServiceApi
 import '../../core/services/exam_service_api.dart';
+import '../../widgets/app_snackbar.dart';
 import 'dashboard_content.dart';
-import '../../widgets/global_search_delegate.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/notification_badge.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
+import '../../widgets/custom_speed_dial.dart';
+import '../users/add_user_screen.dart';
+import '../sections/add_section_screen.dart';
+import '../class/add_class_screen.dart';
+import 'analytics_dashboard_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_drawer.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class ProprietorDashboard extends StatefulWidget {
   final String schoolId;
@@ -44,8 +52,8 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
   Map<String, double> _stats = {
     'totalGenerated': 0.0,
     'totalSpent': 0.0,
-    'cashInHand': 0.0,
-    'cashInAccount': 0.0,
+    'totalFees': 0.0, // Represents total expected
+    'outstandingDebt': 0.0, // Replace cash inputs with actual debt stats
     'balanceRemaining': 0.0,
   };
   
@@ -209,7 +217,15 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
 
     try {
       final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+      final feeService = Provider.of<FeeServiceApi>(context, listen: false);
+
       final statsData = await transactionService.getDashboardStats(
+        sectionId: int.tryParse(_selectedSectionId!),
+        sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
+        termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
+      );
+
+      final feesData = await feeService.getFeeSummary(
         sectionId: int.tryParse(_selectedSectionId!),
         sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
         termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
@@ -221,8 +237,8 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
         _stats = {
           'totalGenerated': (statsData['total_income'] as num?)?.toDouble() ?? 0.0,
           'totalSpent': (statsData['total_expenses'] as num?)?.toDouble() ?? 0.0,
-          'cashInHand': 0.0, // Not directly provided by API yet, or calculated differently
-          'cashInAccount': 0.0,
+          'totalFees': (feesData['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'outstandingDebt': (feesData['total_balance'] as num?)?.toDouble() ?? 0.0,
           'balanceRemaining': (statsData['balance'] as num?)?.toDouble() ?? 0.0,
         };
         _isLoading = false;
@@ -290,16 +306,7 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
       appBar: CustomAppBar(
         title: 'Dashboard Overview',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded, color: Colors.white),
-            tooltip: 'Search Students/Transactions',
-            onPressed: () => showSearch(context: context, delegate: GlobalSearchDelegate()),
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white),
-            tooltip: 'Payout Settings',
-            onPressed: () => Navigator.pushNamed(context, '/school-settings'),
-          ),
+          const NotificationBadge(),
         ],
       ),
       drawer: const CustomDrawer(),
@@ -384,6 +391,48 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
             attendanceSummary: _attendanceSummary,
             academicAnalytics: _academicAnalytics,
           ),
+        ),
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80.0), // Prevent overlapping with context.isMobile bottom navbar
+        child: CustomSpeedDial(
+          tooltip: 'Proprietor Actions',
+          children: [
+            SpeedDialChild(
+              child: const Icon(Icons.insights_rounded),
+              backgroundColor: AppTheme.neonPurple,
+              foregroundColor: Colors.white,
+              label: 'View Analytics',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnalyticsDashboardScreen(schoolId: widget.schoolId))),
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.person_add_rounded),
+              backgroundColor: AppTheme.neonBlue,
+              foregroundColor: Colors.white,
+              label: 'Add User',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddUserScreen())).then((_) => _refreshDashboard()),
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.grid_view_rounded),
+              backgroundColor: AppTheme.neonTeal,
+              foregroundColor: Colors.white,
+              label: 'Add Section',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddSectionScreen())).then((_) => _refreshDashboard()),
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.class_rounded),
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              label: 'Add Class',
+              onTap: () {
+                if (_selectedSectionId == null) {
+                  AppSnackbar.showWarning(context, message: 'Please select a section first.');
+                  return;
+                }
+                Navigator.push(context, MaterialPageRoute(builder: (_) => AddClassScreen(schoolId: widget.schoolId, sectionId: _selectedSectionId!))).then((_) => _loadClasses(_selectedSectionId!));
+              },
+            ),
+          ],
         ),
       ),
     );

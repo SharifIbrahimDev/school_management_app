@@ -29,7 +29,7 @@ class TransactionsListScreen extends StatefulWidget {
   });
 
   @override
-  _TransactionsListScreenState createState() => _TransactionsListScreenState();
+  State<TransactionsListScreen> createState() => _TransactionsListScreenState();
 }
 
 class _TransactionsListScreenState extends State<TransactionsListScreen> {

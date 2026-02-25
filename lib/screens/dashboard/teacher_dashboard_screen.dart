@@ -3,6 +3,7 @@ import '../../core/utils/app_theme.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/teacher_dashboard_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/notification_badge.dart';
 import '../../widgets/custom_drawer.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
@@ -28,23 +29,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       appBar: CustomAppBar(
         title: 'Teacher Dashboard',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white),
-            tooltip: 'Profile',
-            onPressed: () {
-              Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await widget.authService.signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
-              }
-            },
-          ),
+          const NotificationBadge(),
         ],
       ),
       drawer: const CustomDrawer(),

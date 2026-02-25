@@ -1,19 +1,18 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/fee_model.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/services/fee_service_api.dart';
+import '../../core/services/payment_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_snackbar.dart';
 import 'edit_fee_screen.dart';
-import '../transactions/add_transaction_screen.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/services/pdf_invoice_service.dart';
 import '../../core/services/transaction_service_api.dart';
 import '../../core/services/student_service_api.dart';
-import '../../core/services/payment_service.dart';
 import 'payment_success_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 
@@ -84,7 +83,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
       final txs = await transactionService.getTransactions(
         studentId: int.tryParse(_fee.studentId),
       );
-      if (mounted) {
+      if (context.mounted) {
         setState(() {
           _transactions = txs;
         });
@@ -112,22 +111,20 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
         ],
       ),
     );
-
+    if (!context.mounted) return;
     if (confirmed == true) {
       setState(() => _isLoading = true);
       try {
         final feeService = Provider.of<FeeServiceApi>(context, listen: false);
         await feeService.deleteFee(int.tryParse(_fee.id) ?? 0);
         
-        if (mounted) {
-          AppSnackbar.showSuccess(context, message: 'Fee deleted successfully');
-          Navigator.pop(context);
-        }
+        if (!mounted) return;
+        AppSnackbar.showSuccess(context, message: 'Fee deleted successfully');
+        Navigator.pop(context);
       } catch (e) {
-        if (mounted) {
-          AppSnackbar.showError(context, message: 'Error deleting fee: $e');
-          setState(() => _isLoading = false);
-        }
+        if (!mounted) return;
+        AppSnackbar.showError(context, message: 'Error deleting fee: $e');
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -140,9 +137,8 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
          schoolName: 'School Management App',
        );
      } catch (e) {
-       if (mounted) {
-         AppSnackbar.showError(context, message: 'Error generating invoice: $e');
-       }
+       if (!mounted) return;
+       AppSnackbar.showError(context, message: 'Error generating invoice: $e');
      }
   }
 
@@ -152,82 +148,121 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
       return;
     }
 
-    final reference = PaymentService.generateReference();
-    
-    await PaymentService.chargeCard(
+    if (_fee.balance <= 0) {
+      AppSnackbar.showInfo(context, message: 'This fee is already fully paid.');
+      return;
+    }
+
+    final int? feeId = int.tryParse(_fee.id);
+    if (feeId == null) {
+      AppSnackbar.showError(context, message: 'Invalid fee ID.');
+      return;
+    }
+
+    await PaymentService.processPayment(
       context: context,
       amount: _fee.balance,
       email: _currentUser!.email,
-      reference: reference,
-      onSuccess: (ref) async {
-        // Record transaction
-        try {
-          final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
-          await transactionService.addTransaction(
-            sectionId: _fee.sectionId is int ? _fee.sectionId as int : int.tryParse(_fee.sectionId.toString()) ?? 0,
-            termId: int.tryParse(_fee.termId.toString()),
-            sessionId: int.tryParse(_fee.sessionId.toString()),
-            studentId: int.tryParse(_fee.studentId),
-            transactionType: 'credit',
-            amount: _fee.balance,
-            paymentMethod: 'paystack',
-            category: 'Tuition Fee',
-            description: 'Online Payment for ${_fee.name}',
-            referenceNumber: ref,
-            feeId: int.tryParse(_fee.id),
-            transactionDate: DateTime.now().toIso8601String(),
-          );
-          
-          if (mounted) {
-             Navigator.pushReplacement(
-               context,
-               MaterialPageRoute(
-                 builder: (_) => PaymentSuccessScreen(
-                   transactionId: ref,
-                   amount: _fee.balance,
-                   studentName: _student?.fullName,
-                 ),
-               ),
-             );
-          }
-        } catch (e) {
-           if (mounted) AppSnackbar.showError(context, message: 'Payment success but recording failed: $e');
-        }
-      },
-      onError: (error) {
-        if (mounted) AppSnackbar.showError(context, message: 'Payment failed: $error');
+      studentId: int.tryParse(_fee.studentId) ?? 0,
+      feeId: feeId,
+      onSuccess: (reference) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentSuccessScreen(
+              transactionId: reference,
+              amount: _fee.balance,
+              studentName: _student?.fullName,
+            ),
+          ),
+        );
       },
     );
   }
 
   Future<void> _recordPayment() async {
-    // Navigate to AddTransactionScreen with pre-filled details
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddTransactionScreen(
-          sectionId: _fee.sectionId.toString(),
-          termId: _fee.termId.toString(),
-          sessionId: _fee.sessionId.toString(),
-          classId: _fee.classId.toString(),
-          initialAmount: _fee.balance > 0 ? _fee.balance : null,
-          initialCategory: 'Tuition Fee', 
-          initialDescription: 'Payment for ${_fee.name}',
-          initialStudentId: _fee.studentId,
-          feeId: int.tryParse(_fee.id),
-        ),
-      ),
+    if (_fee.balance <= 0) {
+      AppSnackbar.showInfo(context, message: 'This fee is already fully paid.');
+      return;
+    }
+
+    // Quick automatic payment dialog
+    final String? method = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Record Payment', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text('Record full payment of ${Formatters.formatCurrency(_fee.balance)} for ${_fee.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.money, size: 18),
+              onPressed: () => Navigator.pop(context, 'cash'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.neonEmerald,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              label: const Text('Cash'),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.account_balance, size: 18),
+              onPressed: () => Navigator.pop(context, 'bank_transfer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.neonBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              label: const Text('Transfer'),
+            ),
+          ],
+        );
+      },
     );
-     // We don't necessarily update the Fee model here because the fee definition stays the same.
-     // But we might want to show "Amount Paid" in Fee Detail later. For V1, this is sufficient.
+
+    if (method == null) return; // User cancelled
+    if (!context.mounted) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+      await transactionService.addTransaction(
+        sectionId: _fee.sectionId is int ? _fee.sectionId as int : int.tryParse(_fee.sectionId.toString()) ?? 0,
+        termId: int.tryParse(_fee.termId.toString()),
+        sessionId: int.tryParse(_fee.sessionId.toString()),
+        studentId: int.tryParse(_fee.studentId),
+        transactionType: 'credit',
+        amount: _fee.balance,
+        paymentMethod: method,
+        category: 'Tuition Fee',
+        description: 'Payment for ${_fee.name}',
+        feeId: int.tryParse(_fee.id),
+        transactionDate: DateTime.now().toIso8601String(),
+      );
+
+      if (mounted) {
+        AppSnackbar.showSuccess(context, message: 'Payment recorded successfully! 🎉');
+        _loadData(); // Refresh fee data automatically
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppSnackbar.showError(context, message: 'Failed to record payment: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final role = _currentUser?.role;
-    final canManageFees = role == UserRole.proprietor || 
-                          role == UserRole.principal || 
-                          role == UserRole.bursar;
+    final canManageFees = role == UserRole.proprietor;
+    final canRecordPayment = role == UserRole.bursar;
+    final canPayOnline = role == UserRole.parent;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -241,8 +276,8 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                     final schoolId = await StorageHelper.getSchoolId();
                     if (schoolId == null) return;
                     
-                    if (mounted) {
-                      final updated = await Navigator.push(
+                    if (!context.mounted) return;
+                    final updated = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => EditFeeScreen(
@@ -254,6 +289,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                       );
                       
                       if (updated == true) {
+                        if (!mounted) return;
                         // Refresh fee data
                         final feeService = Provider.of<FeeServiceApi>(context, listen: false);
                         final feeData = await feeService.getFee(int.parse(_fee.id));
@@ -263,7 +299,6 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                           });
                         }
                       }
-                    }
                   },
                 ),
                 IconButton(
@@ -428,39 +463,43 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                       const SizedBox(height: 24),
                       
                       // Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _recordPayment,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColorDark,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                elevation: 0,
-                              ),
-                              child: const Text('Record Payment', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _payOnline,
-                              icon: const Icon(Icons.bolt_rounded, size: 20),
-                              label: const Text('Pay Online'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.neonBlue,
-                                side: const BorderSide(color: AppTheme.neonBlue, width: 1.5),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      if (canRecordPayment) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _recordPayment,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryColorDark,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Record Manual Payment', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      Row(
+                        children: [
+                          if (canPayOnline) ...[
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _payOnline,
+                                icon: const Icon(Icons.bolt_rounded, size: 20),
+                                label: const Text('Pay Online'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.neonBlue,
+                                  side: const BorderSide(color: AppTheme.neonBlue, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: _generateInvoice,
@@ -546,7 +585,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                                ),
                              ),
                            );
-                        }).toList(),
+                        }),
                       ],
                       const SizedBox(height: 40),
                     ],

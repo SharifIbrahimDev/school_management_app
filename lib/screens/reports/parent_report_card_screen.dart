@@ -6,6 +6,7 @@ import '../../core/services/pdf_export_service.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ParentReportCardScreen extends StatefulWidget {
   final int studentId;
@@ -45,9 +46,7 @@ class _ParentReportCardScreenState extends State<ParentReportCardScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading report card: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -57,7 +56,7 @@ class _ParentReportCardScreenState extends State<ParentReportCardScreen> {
     
     final results = _reportData['results'] as List? ?? [];
     if (results.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No results to export')));
+      AppSnackbar.showWarning(context, message: 'No results available to export.');
       return;
     }
 

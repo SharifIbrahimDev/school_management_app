@@ -12,6 +12,7 @@ import '../student/add_student_screen.dart';
 import 'assign_teacher_screen.dart';
 import 'edit_class_screen.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../core/services/student_service_api.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final ClassModel classModel;
@@ -28,6 +29,7 @@ class ClassDetailScreen extends StatefulWidget {
 class _ClassDetailScreenState extends State<ClassDetailScreen> {
   UserModel? _currentUser;
   String _teacherName = 'Loading...';
+  int? _actualStudentCount;
 
   @override
   void initState() {
@@ -38,10 +40,22 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   Future<void> _loadData() async {
     final authService = Provider.of<AuthServiceApi>(context, listen: false);
     final userService = Provider.of<UserServiceApi>(context, listen: false);
+    final studentService = Provider.of<StudentServiceApi>(context, listen: false);
     
     final userMap = authService.currentUser;
     if (userMap != null) {
       _currentUser = UserModel.fromMap(userMap);
+    }
+    
+    try {
+      final students = await studentService.getStudents(classId: int.tryParse(widget.classModel.id));
+      if (mounted) {
+        setState(() {
+          _actualStudentCount = students.length;
+        });
+      }
+    } catch (_) {
+      // ignore silently if it fails
     }
 
     if (widget.classModel.assignedTeacherUserId != null && widget.classModel.assignedTeacherUserId!.isNotEmpty) {
@@ -161,8 +175,8 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       const SizedBox(height: 12),
                       DetailItem(
                         icon: Icons.people,
-                        title: 'Capacity',
-                        value: widget.classModel.capacity?.toString() ?? 'N/A',
+                        title: 'Students / Capacity',
+                        value: '${_actualStudentCount != null ? '$_actualStudentCount' : 'Loading...'} / ${widget.classModel.capacity?.toString() ?? 'No Limit'}',
                       ),
                       const SizedBox(height: 12),
                       DetailItem(

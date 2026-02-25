@@ -10,9 +10,6 @@ import '../core/utils/formatters.dart';
 import '../core/utils/app_theme.dart';
 import '../core/utils/responsive_utils.dart';
 import '../screens/fees/parent_fee_screen.dart';
-import 'analytics_charts.dart';
-import '../core/services/attendance_service_api.dart';
-import '../core/services/exam_service_api.dart';
 import 'responsive_widgets.dart';
 import '../core/services/auth_service_api.dart';
 import 'error_display_widget.dart';
@@ -38,8 +35,6 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
   List<StudentModel> _students = [];
   List<SectionModel> _sections = [];
 
-  Map<int, Map<String, dynamic>> _studentStats = {};
-  Map<int, List<Map<String, dynamic>>> _studentResults = {};
   Map<String, double> _studentBalances = {};
   double _totalGlobalOutstanding = 0.0;
   bool _isLoading = true;
@@ -108,52 +103,27 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
 
       if (!mounted) return;
 
-      // Fetch stats for all students
-      final attendanceService = Provider.of<AttendanceServiceApi>(context, listen: false);
-      final examService = Provider.of<ExamServiceApi>(context, listen: false);
+             // 3. Fetch Fees and calculate balance
+            double globalTotal = 0.0;
+            Map<String, double> balances = {};
 
-      _studentStats = {}; // Reset
-      _studentResults = {};
-      
-      double globalTotal = 0.0;
-      Map<String, double> balances = {};
-
-      for (var student in _students) {
-         final sId = int.tryParse(student.id);
-         if (sId != null) {
-            // 1. Fetch Attendance Stats
-            try {
-              final attendance = await attendanceService.getStudentAttendanceSummary(sId);
-              _studentStats[sId] = {
-                'attendance': (attendance['percentage'] as num?)?.toDouble() ?? 0.0,
-              };
-            } catch (e) {
-              debugPrint('Error loading stats for student $sId: $e');
-            }
-
-            // 2. Fetch Recent Results
-            try {
-              final results = await examService.getStudentRecentResults(sId);
-              _studentResults[sId] = results;
-            } catch (e) {
-              debugPrint('Error loading results for student $sId: $e');
-            }
-
-            // 3. Fetch Fees and calculate balance
-            try {
-               final fees = await feeService.getFees(studentId: sId);
-               double studentTotal = 0.0;
-               for (var fee in fees) {
-                  final balance = (fee['balance'] ?? fee['amount'] ?? 0).toDouble();
-                  if (balance > 0) studentTotal += balance;
-               }
-               balances[student.id] = studentTotal;
-               globalTotal += studentTotal;
-            } catch (e) {
-               debugPrint('Error loading fees for student $sId: $e');
-            }
-         }
-      }
+            for (var student in _students) {
+               final sId = int.tryParse(student.id);
+               if (sId != null) {
+                 try {
+                   final fees = await feeService.getFees(studentId: sId);
+                   double studentTotal = 0.0;
+                   for (var fee in fees) {
+                      final balance = (fee['balance'] ?? fee['amount'] ?? 0).toDouble();
+                      if (balance > 0) studentTotal += balance;
+                   }
+                   balances[student.id] = studentTotal;
+                   globalTotal += studentTotal;
+                } catch (e) {
+                   debugPrint('Error loading fees for student $sId: $e');
+                }
+             }
+          }
       
       _totalGlobalOutstanding = globalTotal;
       _studentBalances = balances;
@@ -273,7 +243,7 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                             desktopColumns: 2,
                             runSpacing: 16,
                             spacing: 16,
-                            childAspectRatio: 2.2,
+                            childAspectRatio: 2.0,
                             children: _students
                                 .where((s) => s.sectionIds.contains(selectedSection!.id))
                                 .map((student) => _buildStudentCard(student))
@@ -292,177 +262,97 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                 ],
               ),
 
-              const SizedBox(height: 48),
-
-                const SizedBox(height: 32),
-
-                // Attendance Section
-                if (selectedSection != null) ...[
-                  Text(
-                    "Attendance Tracking",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ResponsiveGridView(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mobileColumns: 1,
-                    tabletColumns: 2,
-                    desktopColumns: 3,
-                    runSpacing: 24,
-                    spacing: 24,
-                    childAspectRatio: 1.2,
-                    children: _students
-                        .where((s) => s.sectionIds.contains(selectedSection!.id))
-                        .map((student) {
-                      final sId = int.tryParse(student.id) ?? 0;
-                      final stats = _studentStats[sId] ?? {'attendance': 0.0};
-                      final attendance = (stats['attendance'] as double);
-
-                      return Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: AppTheme.glassDecoration(
-                          context: context,
-                          opacity: 0.1,
-                          borderRadius: 28,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              student.fullName, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 20),
-                            AttendanceCircleChart(
-                              percentage: attendance,
-                              label: 'Attendance',
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+              const SizedBox(height: 32),
+              
+              Text(
+                "Quick Actions",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                   _buildQuickAction(context, Icons.event_available_rounded, "Calendar", AppTheme.neonBlue),
+                   _buildQuickAction(context, Icons.photo_library_rounded, "Gallery", AppTheme.neonPurple),
+                   _buildQuickAction(context, Icons.menu_book_rounded, "Handbook", AppTheme.neonPink),
+                   _buildQuickAction(context, Icons.contact_support_rounded, "Support", AppTheme.neonEmerald),
                 ],
+              ),
 
-                const SizedBox(height: 32),
+              const SizedBox(height: 32),
+              
+              // Recent Activity or Info Card
+              _buildInfoCard(
+                context,
+                title: "School Announcements",
+                message: "Reminder: Mid-term holidays start next week Friday. Check the calendar for details.",
+                icon: Icons.campaign_rounded,
+                color: AppTheme.neonBlue,
+              ),
 
-                // Academic Progress Section
-                if (selectedSection != null) ...[
-                  Text(
-                    "Academic Progress",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Column(
-                    children: _students
-                        .where((s) => s.sectionIds.contains(selectedSection!.id))
-                        .map((student) {
-                      final sId = int.tryParse(student.id) ?? 0;
-                      final results = _studentResults[sId] ?? [];
+              const SizedBox(height: 100),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 24),
-                        padding: const EdgeInsets.all(24),
-                        decoration: AppTheme.glassDecoration(
-                          context: context,
-                          opacity: 0.1,
-                          borderRadius: 28,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: AppTheme.neonPink.withValues(alpha: 0.1),
-                                  child: Text(
-                                    student.fullName[0],
-                                    style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  student.fullName,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            if (results.isEmpty)
-                              Center(
-                                child: Text(
-                                  "No recent exam results found",
-                                  style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-                                ),
-                              )
-                            else
-                              ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: results.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: 16),
-                                itemBuilder: (context, index) {
-                                  final res = results[index];
-                                  final subject = res['exam']?['subject']?['subject_name'] ?? 'Unknown Subject';
-                                  final score = (res['score'] as num?)?.toDouble() ?? 0.0;
-                                  final grade = res['grade'] ?? '-';
-                                  
-                                  return Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(subject, style: const TextStyle(fontWeight: FontWeight.w500)),
-                                            Text(
-                                              res['exam']?['exam_name'] ?? 'Exam',
-                                              style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.neonPink.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          "$score / $grade",
-                                          style: const TextStyle(
-                                            color: AppTheme.neonPink,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-                const SizedBox(height: 100),
+  Widget _buildQuickAction(BuildContext context, IconData icon, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: AppTheme.glassDecoration(
+            context: context,
+            opacity: 0.1,
+            borderRadius: 18,
+          ),
+          child: Icon(icon, color: color, size: 28),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, {required String title, required String message, required IconData icon, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.1,
+        borderRadius: 28,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14, height: 1.5),
+                ),
               ],
             ),
           ),
-        ),
-      );
+        ],
+      ),
+    );
   }
 
   Widget _buildLoadingState() {
@@ -607,7 +497,7 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                   student.prettyId ?? 'ID: ${student.id}',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     _SmallActionButton(

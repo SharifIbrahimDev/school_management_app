@@ -52,6 +52,7 @@ class TransactionModel {
   final String termId;
   final String? sessionId;
   final String? studentId;
+  final String? feeId;
 
   TransactionModel({
     required this.id,
@@ -71,6 +72,7 @@ class TransactionModel {
     required this.termId,
     this.sessionId,
     this.studentId,
+    this.feeId,
   }) {
     if (id.isEmpty) throw ArgumentError('id cannot be empty');
     if (amount <= 0) throw ArgumentError('amount must be positive');
@@ -100,6 +102,7 @@ class TransactionModel {
       'term_id': termId,
       'session_id': sessionId,
       'student_id': studentId,
+      'fee_id': feeId,
     };
   }
 
@@ -135,6 +138,7 @@ class TransactionModel {
         termId: (map['term_id'] ?? map['termId'] ?? '').toString(),
         sessionId: (map['session_id'] ?? map['sessionId'])?.toString(),
         studentId: (map['student_id'] ?? map['studentId'])?.toString(),
+        feeId: (map['fee_id'] ?? map['feeId'])?.toString(),
       );
     } catch (e) {
       debugPrint('Error parsing TransactionModel: $e');
@@ -173,6 +177,7 @@ class TransactionModel {
     String? termId,
     String? sessionId,
     String? studentId,
+    String? feeId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -192,6 +197,7 @@ class TransactionModel {
       termId: termId ?? this.termId,
       sessionId: sessionId ?? this.sessionId,
       studentId: studentId ?? this.studentId,
+      feeId: feeId ?? this.feeId,
     );
   }
 

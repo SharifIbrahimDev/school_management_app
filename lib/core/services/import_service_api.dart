@@ -20,19 +20,21 @@ class ImportServiceApi extends ChangeNotifier {
       final fields = {'role': role};
       final List<http.MultipartFile> files = [];
 
-      if (kIsWeb && fileBytes != null) {
+      if (fileBytes != null) {
         files.add(http.MultipartFile.fromBytes(
           'file',
           fileBytes,
           filename: fileName ?? 'import.csv',
           contentType: MediaType('text', 'csv'),
         ));
-      } else {
+      } else if (file.path.isNotEmpty) {
         files.add(await http.MultipartFile.fromPath(
           'file',
           file.path,
           contentType: MediaType('text', 'csv'),
         ));
+      } else {
+        throw Exception('No file or data provided for import');
       }
 
       return await _apiService.multipart(
@@ -61,19 +63,21 @@ class ImportServiceApi extends ChangeNotifier {
 
       final List<http.MultipartFile> files = [];
 
-      if (kIsWeb && fileBytes != null) {
+      if (fileBytes != null) {
         files.add(http.MultipartFile.fromBytes(
           'file',
           fileBytes,
           filename: fileName ?? 'students.csv',
           contentType: MediaType('text', 'csv'),
         ));
-      } else {
+      } else if (file.path.isNotEmpty) {
         files.add(await http.MultipartFile.fromPath(
           'file',
           file.path,
           contentType: MediaType('text', 'csv'),
         ));
+      } else {
+        throw Exception('No file or data provided for import');
       }
 
       return await _apiService.multipart(

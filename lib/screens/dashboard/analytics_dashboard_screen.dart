@@ -1,20 +1,28 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
-import '../../widgets/analytics_charts.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../core/services/report_service_api.dart';
+import '../../core/services/pdf_export_service.dart';
 import '../../core/services/transaction_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../core/services/pdf_export_service.dart';
-import '../../core/models/transaction_model.dart';
+import '../../widgets/notification_badge.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import '../../widgets/custom_speed_dial.dart';
+import '../../screens/transactions/add_transaction_screen.dart';
+import '../../screens/student/add_student_screen.dart';
+import '../../screens/academics/attendance_screen.dart';
+import '../../widgets/financial_chart.dart';
 import '../../core/utils/formatters.dart';
+import '../../widgets/app_snackbar.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String schoolId;
@@ -36,8 +44,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   double _totalExpense = 0;
   double _netProfit = 0;
   List<FlSpot> _incomeSpots = [];
+  List<FlSpot> _expenseSpots = [];
   List<Map<String, dynamic>> _recentTransactions = [];
-  List<Map<String, dynamic>> _paymentMethods = [];
+  double _collectedRevenue = 0;
+  double _outstandingRevenue = 0;
+  final GlobalKey _growthChartKey = GlobalKey();
+  final GlobalKey _collectionChartKey = GlobalKey();
 
   @override
   void initState() {
@@ -54,22 +66,21 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       final reportService = Provider.of<ReportServiceApi>(context, listen: false);
       final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
       
+      final collectionStats = await reportService.getCollectionStats();
       final financials = await reportService.getFinancialSummary();
       final transactionsData = await transactionService.getTransactions(limit: 5);
       final paymentMethods = await reportService.getPaymentMethods();
 
       double income = 0;
       double expense = 0;
-      List<FlSpot> spots = [];
-
       // Initialize 12 months with 0
       Map<int, double> monthlyIncome = {for (var i = 1; i <= 12; i++) i: 0.0};
+      Map<int, double> monthlyExpense = {for (var i = 1; i <= 12; i++) i: 0.0};
 
       for (var item in financials) {
         final double inc = (item['income'] ?? 0).toDouble();
         final double exp = (item['expense'] ?? 0).toDouble();
         
-        // Robustly parse the month key as its occasionally returned as a String by some API endpoints
         final dynamic rawMonth = item['month'];
         final int month = rawMonth is int ? rawMonth : int.tryParse(rawMonth?.toString() ?? '0') ?? 0;
         
@@ -78,11 +89,19 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         
         if (month >= 1 && month <= 12) {
           monthlyIncome[month] = inc;
+          monthlyExpense[month] = exp;
         }
       }
 
+      List<FlSpot> incomeSpots = [];
+      List<FlSpot> expenseSpots = [];
+
       monthlyIncome.forEach((month, value) {
-        spots.add(FlSpot((month - 1).toDouble(), value));
+        incomeSpots.add(FlSpot((month - 1).toDouble(), value / 1000));
+      });
+
+      monthlyExpense.forEach((month, value) {
+        expenseSpots.add(FlSpot((month - 1).toDouble(), value / 1000));
       });
 
       if (mounted) {
@@ -90,9 +109,11 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           _totalIncome = income;
           _totalExpense = expense;
           _netProfit = income - expense;
-          _incomeSpots = spots;
+          _incomeSpots = incomeSpots;
+          _expenseSpots = expenseSpots;
           _recentTransactions = transactionsData;
-          _paymentMethods = paymentMethods;
+          _collectedRevenue = (collectionStats['total_paid'] ?? 0).toDouble();
+          _outstandingRevenue = (collectionStats['total_balance'] ?? 0).toDouble();
           _isLoading = false;
         });
       }
@@ -114,6 +135,9 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     return Scaffold(
       appBar: const CustomAppBar(
         title: 'Advanced Analytics',
+        actions: [
+          NotificationBadge(),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -208,14 +232,38 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                   ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _generateDetailedReport,
-        label: Text(context.isMobile ? 'Report' : 'Generate Detailed Report'),
-        icon: _isPrinting 
-          ? const LoadingIndicator(size: 20, color: Colors.white)
-          : const Icon(Icons.description_rounded),
-        backgroundColor: AppTheme.neonEmerald,
-        foregroundColor: Colors.white,
+      floatingActionButton: CustomSpeedDial(
+        tooltip: 'Quick Actions',
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.add_shopping_cart_rounded),
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            label: 'New Transaction',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(sectionId: widget.sectionId ?? '', termId: '', classId: ''))),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.person_add_rounded),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Add Student',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddStudentScreen())),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.how_to_reg_rounded),
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            label: 'Mark Attendance',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen())),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.description_rounded),
+            backgroundColor: AppTheme.neonEmerald,
+            foregroundColor: Colors.white,
+            label: 'Generate Report',
+            onTap: _generateDetailedReport,
+          ),
+        ],
       ),
     );
   }
@@ -237,19 +285,42 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       );
       
       final pdfService = PdfExportService();
-      await pdfService.exportTransactionReport(
-        schoolName: 'School Analytics Report',
-        transactions: allTransactions.map((t) => TransactionModel.fromMap(t)).toList(),
-        sectionName: 'All Sections',
-        startDate: startDate,
-        endDate: endDate,
+      
+      // Capture charts as images
+      final growthChartImage = await _captureWidget(_growthChartKey);
+      final collectionChartImage = await _captureWidget(_collectionChartKey);
+
+      await pdfService.exportAnalyticsReport(
+        schoolName: 'Executive Financial Report',
+        totalIncome: _totalIncome,
+        totalExpense: _totalExpense,
+        netProfit: _netProfit,
+        collectedRevenue: _collectedRevenue,
+        outstandingRevenue: _outstandingRevenue,
+        recentTransactions: allTransactions,
+        growthChartImage: growthChartImage,
+        collectionChartImage: collectionChartImage,
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Report generation failed: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     } finally {
       if (mounted) setState(() => _isPrinting = false);
+    }
+  }
+
+  Future<Uint8List?> _captureWidget(GlobalKey key) async {
+    try {
+      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error capturing widget: $e');
+      return null;
     }
   }
 
@@ -332,10 +403,20 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           _buildAttendanceBarChart(context),
         if (context.isMobile) const SizedBox(height: 16),
         if (context.isTablet || context.isDesktop)
-          Expanded(child: _buildPaymentMethodPieChart(context))
+          Expanded(child: _buildCollectionDonutChart(context))
         else
-          _buildPaymentMethodPieChart(context),
+          _buildCollectionDonutChart(context),
       ],
+    );
+  }
+
+  Widget _buildCollectionDonutChart(BuildContext context) {
+    return RepaintBoundary(
+      key: _collectionChartKey,
+      child: FeeCollectionDonutChart(
+        collected: _collectedRevenue,
+        remaining: _outstandingRevenue,
+      ),
     );
   }
 
@@ -419,19 +500,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   }
 
   Widget _buildFinancialTrendSection(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: AppTheme.glassDecoration(
-        context: context,
-        opacity: 0.2,
-        borderRadius: 24,
-      ),
-      child: NeonLineChart(
-        title: 'Fee Collection Trends (Yearly)',
-        spots: _incomeSpots.isNotEmpty 
-            ? _incomeSpots 
-            : const [FlSpot(0, 0), FlSpot(11, 0)], // Empty state
-        neonColor: AppTheme.neonBlue,
+    return RepaintBoundary(
+      key: _growthChartKey,
+      child: FinancialGrowthChart(
+        incomeData: _incomeSpots.map((s) => s.y).toList(),
+        expenseData: _expenseSpots.map((s) => s.y).toList(),
+        months: const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       ),
     );
   }
@@ -495,60 +569,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _buildPaymentMethodPieChart(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    List<PieChartSectionData> sections = [];
-    if (_paymentMethods.isNotEmpty) {
-      final colors = [AppTheme.neonTeal, AppTheme.neonBlue, AppTheme.neonPurple, Colors.orange];
-      for (int i = 0; i < _paymentMethods.length; i++) {
-        final pm = _paymentMethods[i];
-        final val = (pm['percentage'] ?? pm['value'] ?? 10).toDouble();
-        final title = (pm['method'] ?? 'Other').toString();
-        sections.add(
-          PieChartSectionData(
-            color: colors[i % colors.length],
-            value: val,
-            title: title.substring(0, 3).toUpperCase(),
-            radius: 40,
-            showTitle: true,
-            titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-        );
-      }
-    } else {
-       sections = [
-        PieChartSectionData(color: Colors.grey, value: 100, title: 'N/A', radius: 40, showTitle: false),
-      ];
-    }
-
-    return Container(
-      height: 240,
-      padding: const EdgeInsets.all(20),
-      decoration: AppTheme.glassDecoration(
-        context: context,
-        opacity: isDark ? 0.05 : 0.4,
-        borderColor: AppTheme.neonPurple.withValues(alpha: 0.3),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Payment Sources', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 24),
-          Expanded(
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 4,
-                centerSpaceRadius: 20,
-                sections: sections,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildRecentTransactionsSection(BuildContext context) {
     return Container(

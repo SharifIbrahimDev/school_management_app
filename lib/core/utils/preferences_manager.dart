@@ -33,7 +33,7 @@ class PreferencesManager {
 
   // Theme
   static String get themeMode =>
-      instance.getString(_keyThemeMode) ?? 'system';
+      instance.getString(_keyThemeMode) ?? 'light';
   
   static Future<void> setThemeMode(String mode) =>
       instance.setString(_keyThemeMode, mode);

@@ -17,8 +17,6 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
-import '../../core/utils/error_handler.dart';
-
 class AcademicSessionsScreen extends StatefulWidget {
   final Function(String?, String?)? onSelectionChanged;
 
@@ -119,7 +117,7 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
       confirmColor: Colors.red,
       icon: Icons.delete_sweep_rounded,
     );
-
+    if (!mounted) return;
     if (confirmed == true) {
       try {
         final sessionService = Provider.of<SessionServiceApi>(context, listen: false);

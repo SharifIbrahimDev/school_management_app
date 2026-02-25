@@ -92,8 +92,8 @@ class _LoadingIndicatorState extends State<LoadingIndicator> with SingleTickerPr
                 final scale = 0.5 + (0.3 * (1.0 - _controller.value));
                 final opacity = 0.3 + (0.7 * (1.0 - _controller.value));
                 return Container(
-                  width: widget.size * 0.4,
-                  height: widget.size * 0.4,
+                  width: widget.size * 0.4 * scale,
+                  height: widget.size * 0.4 * scale,
                   decoration: BoxDecoration(
                     color: effectiveColor.withValues(alpha: opacity),
                     shape: BoxShape.circle,

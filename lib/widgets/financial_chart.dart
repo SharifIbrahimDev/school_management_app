@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../core/utils/formatters.dart';
+import '../core/utils/app_theme.dart';
 
 /// A professional bar chart widget for displaying financial data
 class FinancialBarChart extends StatelessWidget {
@@ -259,6 +259,252 @@ class _LegendItem extends StatelessWidget {
           style: theme.textTheme.bodySmall?.copyWith(
             fontSize: 12,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A premium line chart for showing financial growth trends
+class FinancialGrowthChart extends StatelessWidget {
+  final List<double> incomeData;
+  final List<double> expenseData;
+  final List<String> months;
+
+  const FinancialGrowthChart({
+    super.key,
+    required this.incomeData,
+    required this.expenseData,
+    required this.months,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Growth Analysis',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 250,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 1,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < months.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                months[value.toInt()],
+                                style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            '₦${value.toInt()}K',
+                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                          );
+                        },
+                        reservedSize: 42,
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: incomeData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                      isCurved: true,
+                      color: const Color(0xFF10B981),
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: expenseData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                      isCurved: true,
+                      color: const Color(0xFFEF4444),
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A specialized donut chart for showing fee collection progress
+class FeeCollectionDonutChart extends StatelessWidget {
+  final double collected;
+  final double remaining;
+
+  const FeeCollectionDonutChart({
+    super.key,
+    required this.collected,
+    required this.remaining,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final total = collected + remaining;
+    final collectionPercentage = total > 0 ? (collected / total) * 100 : 0.0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Collection Status',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.neonTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${collectionPercentage.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      color: AppTheme.neonTeal,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 180,
+              child: Stack(
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sectionsSpace: 0,
+                      centerSpaceRadius: 60,
+                      startDegreeOffset: -90,
+                      sections: [
+                        PieChartSectionData(
+                          color: AppTheme.neonEmerald,
+                          value: collected,
+                          title: '',
+                          radius: 20,
+                        ),
+                        PieChartSectionData(
+                          color: AppTheme.errorColor.withValues(alpha: 0.2),
+                          value: remaining,
+                          title: '',
+                          radius: 15,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Total Revenue',
+                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                        ),
+                        Text(
+                          Formatters.formatCurrency(total),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildLegendItem('Collected', collected, AppTheme.neonEmerald),
+                _buildLegendItem('Outstanding', remaining, AppTheme.errorColor),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, double amount, Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          Formatters.formatCurrency(amount),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
       ],
     );

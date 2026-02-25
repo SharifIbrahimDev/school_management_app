@@ -7,7 +7,8 @@ import 'package:csv/csv.dart';
 import '../../core/services/import_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../core/utils/app_theme.dart';
-import '../../widgets/responsive_widgets.dart';
+import '../../widgets/success_sheet.dart';
+import '../../widgets/app_snackbar.dart';
 
 class BulkImportScreen extends StatefulWidget {
   const BulkImportScreen({super.key});
@@ -43,9 +44,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -136,8 +135,12 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
           }
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Import completed successfully')),
+        SuccessSheet.show(
+          context,
+          title: 'Import Successful',
+          message: 'Successfully imported ${result['imported_count']} $_selectedType. '
+                   '${(result['errors'] as List?)?.isNotEmpty == true ? "\nNote: ${(result['errors'] as List).length} record(s) had errors." : ""}',
+          onButtonPressed: () => Navigator.pop(context),
         );
       }
     } catch (e) {
@@ -189,7 +192,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
 
   Widget _buildTypeSelector() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: AppTheme.glassDecoration(
         context: context,
         opacity: 0.1,
@@ -198,18 +201,32 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "SELECT DATA CATEGORY",
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textSecondaryColor,
-              letterSpacing: 1.5,
-            ),
+          Row(
+            children: [
+              Icon(
+                _selectedType == 'students' ? Icons.school_rounded : 
+                _selectedType == 'teachers' ? Icons.work_rounded : Icons.people_rounded,
+                size: 14,
+                color: AppTheme.neonBlue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "DATA CATEGORY",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.neonBlue,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
           DropdownButtonFormField<String>(
-            initialValue: _selectedType,
+            value: _selectedType,
             decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
+            dropdownColor: Colors.white,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
             items: const [
               DropdownMenuItem(value: 'students', child: Text('Student Database')),
               DropdownMenuItem(value: 'parents', child: Text('Parent Profiles')),

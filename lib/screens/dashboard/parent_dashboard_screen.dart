@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/utils/app_theme.dart';
-import '../../core/services/auth_service_api.dart';
 import '../../widgets/parent_dashboard_widget.dart';
 import '../../widgets/notification_badge.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -25,28 +23,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Parent Dashboard',
         actions: [
-          const NotificationBadge(),
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white),
-            tooltip: 'Profile',
-            onPressed: () {
-              Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
-            onPressed: () async {
-              final authService = Provider.of<AuthServiceApi>(context, listen: false);
-              await authService.signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
-              }
-            },
-          ),
+          NotificationBadge(),
         ],
       ),
       drawer: const CustomDrawer(),

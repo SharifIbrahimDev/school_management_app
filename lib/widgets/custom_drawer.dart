@@ -213,6 +213,13 @@ class CustomDrawer extends StatelessWidget {
     
     items.add(_buildDrawerItem(
       context,
+      icon: Icons.settings_rounded,
+      label: 'App Settings',
+      onTap: () => _navigateTo(context, '/settings'),
+    ));
+
+    items.add(_buildDrawerItem(
+      context,
       icon: Icons.person_2_rounded,
       label: 'My Profile',
       onTap: () => _navigateTo(context, '/profile'),
@@ -264,8 +271,7 @@ class CustomDrawer extends StatelessWidget {
 
   void _navigateTo(BuildContext context, String route) {
     Navigator.pop(context); // Close drawer
-    // In actual implementation, this would navigate to the specific route
-    // For now we navigate to these routes which should be defined in main.dart
+    Navigator.pushNamed(context, route);
   }
 
   Widget _buildFooter(BuildContext context) {

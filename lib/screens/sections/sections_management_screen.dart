@@ -30,7 +30,7 @@ class SectionDetailScreen extends StatelessWidget {
         ],
       ),
     );
-
+    if (!context.mounted) return;
     if (confirmed == true) {
       try {
         final sectionId = int.tryParse(section.id) ?? 0;

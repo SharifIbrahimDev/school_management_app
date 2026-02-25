@@ -57,7 +57,7 @@ class _TermDetailScreenState extends State<TermDetailScreen> {
           _errorMessage = 'Error loading term: $e';
         });
       }
-      print('Error loading term: $e');
+      debugPrint('Error loading term: $e');
     }
   }
 

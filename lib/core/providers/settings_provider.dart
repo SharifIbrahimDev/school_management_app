@@ -56,7 +56,7 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Reset all settings to defaults
   Future<void> resetToDefaults() async {
-    await setThemeMode('system');
+    await setThemeMode('light');
     await setLanguage('en');
     await setEmailNotifications(true);
     await setPushNotifications(true);

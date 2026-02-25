@@ -6,18 +6,12 @@ import '../core/models/user_model.dart';
 import '../core/services/auth_service_api.dart';
 import '../core/services/class_service_api.dart';
 import '../core/services/section_service_api.dart';
-import '../core/services/student_service_api.dart';
 import '../screens/academics/attendance_screen.dart';
 import '../screens/academics/teacher_homework_screen.dart';
-import '../screens/academics/lesson_plan_screen.dart';
 import '../screens/academics/exams_list_screen.dart';
-import '../screens/academics/bulk_result_upload_screen.dart';
 
 import 'loading_indicator.dart';
-import 'teacher_schedule_card.dart';
 import '../core/utils/app_theme.dart';
-import '../core/utils/responsive_utils.dart';
-import 'responsive_widgets.dart';
 import 'error_display_widget.dart';
 import 'empty_state_widget.dart';
 
@@ -131,32 +125,24 @@ class _TeacherDashboardWidgetState extends State<TeacherDashboardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ResponsiveRowColumn(
-                rowOnMobile: false,
-                rowOnTablet: true,
-                rowOnDesktop: true,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildWelcomeHeader(),
-                        const SizedBox(height: 32),
-                        _buildQuickActions(),
-                      ],
-                    ),
-                  ),
-                  if (!context.isMobile) const SizedBox(width: 32),
-                  if (!context.isMobile)
-                    const Expanded(
-                      flex: 1,
-                      child: TeacherScheduleCard(),
-                    ),
-                ],
-              ),
+              _buildWelcomeHeader(),
               const SizedBox(height: 32),
+              
+              _buildStatsOverview(),
+              const SizedBox(height: 32),
+
+              Text(
+                "Quick Actions",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildQuickActionsGrid(),
+
+              const SizedBox(height: 32),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -167,79 +153,35 @@ class _TeacherDashboardWidgetState extends State<TeacherDashboardWidget> {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  if (_sections.length > 1)
-                     Text(
-                       "${_sections.length} Sections Found",
-                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                         color: AppTheme.textSecondaryColor,
-                       ),
-                     ),
+                  if (_classes.length > 3)
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text("View All"),
+                    )
                 ],
               ),
               const SizedBox(height: 16),
               
-              // Section switcher
-              if (_sections.length > 1) ...[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: _sections.map((section) {
-                      final isSelected = selectedSection?.id == section.id;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: InkWell(
-                          onTap: () => setState(() => selectedSection = section),
-                          borderRadius: BorderRadius.circular(20),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            decoration: AppTheme.glassDecoration(
-                              context: context,
-                              opacity: isSelected ? 0.4 : 0.05,
-                              borderRadius: 20,
-                              borderColor: isSelected ? AppTheme.primaryColor : Colors.transparent,
-                              hasGlow: isSelected,
-                            ).copyWith(
-                              gradient: isSelected ? LinearGradient(
-                                colors: [
-                                  AppTheme.primaryColor.withValues(alpha: 0.2),
-                                  AppTheme.neonBlue.withValues(alpha: 0.1),
-                                ],
-                              ) : null,
-                            ),
-                            child: Text(
-                              section.sectionName,
-                              style: TextStyle(
-                                color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondaryColor,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Classes for selected section in a grid
+              // Simplified Class List (Show first 3)
               if (selectedSection != null)
-                ResponsiveGridView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mobileColumns: 1,
-                  tabletColumns: 2,
-                  desktopColumns: 3,
-                  runSpacing: 20,
-                  spacing: 20,
-                  childAspectRatio: 1.6,
+                Column(
                   children: _classes
                       .where((c) => c.sectionId == selectedSection!.id)
-                      .map((c) => _buildClassCard(c))
+                      .take(3)
+                      .map((c) => _buildCompactClassCard(c))
                       .toList(),
                 ),
+
+              const SizedBox(height: 32),
+              
+              _buildInfoCard(
+                context,
+                title: "Administrative Notice",
+                message: "Please ensure all second term results are uploaded by the end of the week for review.",
+                icon: Icons.info_outline_rounded,
+                color: AppTheme.neonPink,
+              ),
+
               const SizedBox(height: 100),
             ],
           ),
@@ -250,8 +192,26 @@ class _TeacherDashboardWidgetState extends State<TeacherDashboardWidget> {
 
   Widget _buildWelcomeHeader() {
     final authService = Provider.of<AuthServiceApi>(context, listen: false);
+    final userMap = authService.currentUser;
     final user = authService.currentUserModel;
     final name = user?.fullName.split(' ').first ?? 'Teacher';
+
+    String getNames(String key, String nameField) {
+      if (userMap != null && userMap[key] is List) {
+        final list = userMap[key] as List;
+        if (list.isNotEmpty) {
+          final names = list.map((e) {
+            if (e is Map) return e[nameField] ?? e['name'] ?? e['id'].toString();
+            return e.toString();
+          }).where((s) => s != 'null' && s.isNotEmpty).toList();
+          if (names.isNotEmpty) return names.join(', ');
+        }
+      }
+      return '';
+    }
+
+    final sectionsDisplay = getNames('assigned_sections', 'section_name');
+    final classesDisplay = getNames('assigned_classes', 'class_name');
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -320,6 +280,22 @@ class _TeacherDashboardWidgetState extends State<TeacherDashboardWidget> {
                     letterSpacing: -1.0,
                   ),
                 ),
+                if (sectionsDisplay.isNotEmpty || classesDisplay.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (sectionsDisplay.isNotEmpty) "Section: $sectionsDisplay",
+                      if (classesDisplay.isNotEmpty) "Class: $classesDisplay"
+                    ].join(' • '),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.primaryColor.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
@@ -336,216 +312,153 @@ class _TeacherDashboardWidgetState extends State<TeacherDashboardWidget> {
     );
   }
 
-  Widget _buildClassCard(ClassModel classItem) {
-    final studentService = Provider.of<StudentServiceApi>(context, listen: false);
-
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: studentService.getStudents(
-        sectionId: int.tryParse(selectedSection!.id),
-        classId: int.tryParse(classItem.id),
+  Widget _buildStatsOverview() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildStatCard("Assigned Classes", _classes.length.toString(), Icons.class_rounded, AppTheme.neonBlue),
+          _buildStatCard("Attendance (Avg)", "94%", Icons.trending_up_rounded, AppTheme.neonEmerald),
+          _buildStatCard("Pending Tasks", "5", Icons.assignment_late_rounded, Colors.orange),
+        ],
       ),
-      builder: (context, snapshot) {
-        final studentCount = snapshot.data?.length ?? 0;
+    );
+  }
 
-        return InkWell(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AttendanceScreen())),
-          borderRadius: BorderRadius.circular(28),
-          child: Container(
-            padding: const EdgeInsets.all(24),
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.1,
+        borderRadius: 24,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 16),
+          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsGrid() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+         _buildTeacherAction(context, Icons.how_to_reg_rounded, "Attendance", AppTheme.neonBlue, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttendanceScreen()))),
+         _buildTeacherAction(context, Icons.assignment_rounded, "Homework", AppTheme.neonPurple, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherHomeworkScreen()))),
+         _buildTeacherAction(context, Icons.quiz_rounded, "Exams", AppTheme.neonPink, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExamsListScreen()))),
+         _buildTeacherAction(context, Icons.chat_bubble_rounded, "Messages", AppTheme.neonEmerald, () => {}),
+      ],
+    );
+  }
+
+  Widget _buildTeacherAction(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
             decoration: AppTheme.glassDecoration(
               context: context,
               opacity: 0.1,
-              borderRadius: 28,
-              borderColor: AppTheme.neonBlue.withValues(alpha: 0.2),
-            ).copyWith(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.neonBlue.withValues(alpha: 0.05),
-                  Colors.transparent,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              borderRadius: 20,
             ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactClassCard(ClassModel classItem) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.05,
+        borderRadius: 20,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.neonBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.groups_2_rounded, color: AppTheme.neonBlue, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.neonBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.groups_2_rounded, color: AppTheme.neonBlue, size: 24),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.neonEmerald.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        "$studentCount Pupils",
-                        style: const TextStyle(
-                          color: AppTheme.neonEmerald,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  classItem.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    letterSpacing: -0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(classItem.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text("Section: ${selectedSection?.sectionName}", style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor)),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondaryColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, {required String title, required String message, required IconData icon, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassDecoration(
+        context: context,
+        opacity: 0.1,
+        borderRadius: 28,
+        borderColor: color.withValues(alpha: 0.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.room_rounded, size: 14, color: AppTheme.textSecondaryColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Section ${selectedSection?.sectionName}",
-                      style: TextStyle(
-                        color: AppTheme.textSecondaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                Text(
+                  message,
+                  style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14, height: 1.5),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (context.isMobile) ...[
-          const TeacherScheduleCard(),
-          const SizedBox(height: 24),
         ],
-        Text(
-          "Quick Actions",
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              _ActionItem(
-                label: "Attendance",
-                icon: Icons.how_to_reg_rounded,
-                color: AppTheme.neonBlue,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AttendanceScreen())),
-              ),
-              _ActionItem(
-                label: "Assignments",
-                icon: Icons.assignment_rounded,
-                color: AppTheme.neonPurple,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TeacherHomeworkScreen())),
-              ),
-              _ActionItem(
-                label: "Lessons",
-                icon: Icons.menu_book_rounded,
-                color: AppTheme.neonEmerald,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LessonPlanScreen())),
-              ),
-              _ActionItem(
-                label: "Exams",
-                icon: Icons.quiz_rounded,
-                color: Colors.orange,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ExamsListScreen())),
-              ),
-              _ActionItem(
-                label: "Results",
-                icon: Icons.analytics_rounded,
-                color: AppTheme.neonPink,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BulkResultUploadScreen())),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionItem extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionItem({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: 90,
-          height: 100,
-          padding: const EdgeInsets.all(12),
-          decoration: AppTheme.glassDecoration(
-            context: context,
-            opacity: 0.05,
-            borderRadius: 24,
-            borderColor: color.withValues(alpha: 0.2),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

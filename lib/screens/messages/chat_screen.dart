@@ -7,6 +7,7 @@ import '../../core/services/message_service_api.dart';
 import '../../core/models/message_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ChatScreen extends StatefulWidget {
   final int otherUserId;
@@ -56,9 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading messages: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -92,9 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _loadMessages();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending message: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     } finally {
       if (mounted) {

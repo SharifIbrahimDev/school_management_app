@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,6 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/confirmation_dialog.dart';
-import '../../core/utils/error_handler.dart';
 import 'edit_section_screen.dart';
 import 'assign_principal_screen.dart';
 import 'assign_bursar_screen.dart';
@@ -25,12 +24,10 @@ class SectionDetailScreen extends StatefulWidget {
   const SectionDetailScreen({super.key, required this.section});
 
   @override
-  _SectionDetailScreenState createState() => _SectionDetailScreenState();
+  State<SectionDetailScreen> createState() => _SectionDetailScreenState();
 }
 
 class _SectionDetailScreenState extends State<SectionDetailScreen> {
-  String? _selectedSessionId;
-  String? _selectedTermId;
 
   Future<Map<String, String>> _fetchUserNames(List<String> userIds, UserServiceApi userService) async {
     final names = <String, String>{};
@@ -83,6 +80,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
     return names;
   }
 
+
   Future<void> _deleteSection(BuildContext context) async {
     final confirmed = await ConfirmationDialog.show(
       context,
@@ -93,41 +91,24 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
       icon: Icons.delete_forever_rounded,
     );
 
-    if (confirmed == true && mounted) {
+    if (!context.mounted) return;
+
+    if (confirmed == true) {
       final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
       try {
         await sectionService.deleteSection(int.tryParse(widget.section.id) ?? 0);
-        if (mounted) {
+        if (context.mounted) {
           Navigator.pop(context);
           AppSnackbar.showSuccess(context, message: 'Section deleted successfully');
         }
       } catch (e) {
-        if (mounted) {
+        if (context.mounted) {
           AppSnackbar.friendlyError(context, error: e);
         }
       }
     }
   }
 
-  // Placeholder for de-assigning principal/bursar as API might not support it yet
-  Future<void> _deAssignPrincipal(BuildContext context, String userId, String userName) async {
-      if (mounted) {
-        AppSnackbar.showWarning(context, message: 'De-assign feature coming soon');
-      }
-  }
-
-  Future<void> _deAssignBursar(BuildContext context, String userId, String userName) async {
-      if (mounted) {
-        AppSnackbar.showWarning(context, message: 'De-assign feature coming soon');
-      }
-  }
-
-  Future<void> _deleteFee(BuildContext context, String feeId, String feeType) async {
-      // Placeholder for delete fee
-      if (mounted) {
-        AppSnackbar.showWarning(context, message: 'Delete fee feature coming soon');
-      }
-  }
 
   Future<Map<String, String>> _fetchAllUserNames(UserServiceApi userService) async {
     final allUserIds = [...widget.section.assignedPrincipalIds, ...widget.section.assignedBursarIds];
@@ -156,10 +137,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Refresh',
             onPressed: () {
-              setState(() {
-                _selectedSessionId = null;
-                _selectedTermId = null;
-              });
+              setState(() {});
             },
           ),
         ],
@@ -184,10 +162,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
         ),
         child: RefreshIndicator(
           onRefresh: () async {
-            setState(() {
-              _selectedSessionId = null;
-              _selectedTermId = null;
-            });
+            setState(() {});
           },
           color: AppTheme.primaryColor,
         child: SingleChildScrollView(

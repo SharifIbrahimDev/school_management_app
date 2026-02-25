@@ -8,11 +8,13 @@ import '../core/services/auth_service_api.dart';
 import '../core/utils/app_theme.dart';
 import '../core/utils/responsive_utils.dart';
 import '../screens/student/add_student_screen.dart';
+import 'app_snackbar.dart';
 import '../screens/student/student_detail_screen.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/error_display_widget.dart';
-import 'loading_indicator.dart';
+
 import 'responsive_widgets.dart';
+import 'skeleton_loader.dart';
 
 class StudentListWidget extends StatefulWidget {
   final String schoolId;
@@ -46,9 +48,7 @@ class _StudentListWidgetState extends State<StudentListWidget> {
   }
 
   void _handleBulkExport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Exporting ${_selectedIds.length} students to PDF...')),
-    );
+    AppSnackbar.showInfo(context, message: 'Exporting ${_selectedIds.length} students to PDF...');
     setState(() {
       _isSelectionMode = false;
       _selectedIds.clear();
@@ -101,7 +101,12 @@ class _StudentListWidgetState extends State<StudentListWidget> {
                 }
 
                 if (!snapshot.hasData) {
-                  return const Center(child: LoadingIndicator());
+                  return ListView.builder(
+                    itemCount: 6,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) => const ListItemSkeletonLoader(),
+                  );
                 }
 
                 final studentsData = snapshot.data!;

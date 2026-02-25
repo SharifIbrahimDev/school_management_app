@@ -8,6 +8,7 @@ import '../../core/models/user_model.dart';
 import '../../core/services/session_service_api.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class EditSessionScreen extends StatefulWidget {
   final AcademicSessionModel session;
@@ -75,15 +76,13 @@ class _EditSessionScreenState extends State<EditSessionScreen> {
           sectionId: widget.session.sectionId,
           sessionId: widget.session.id,
         );
-        Navigator.pop(context); // Pop EditSessionScreen
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session deleted successfully')),
-        );
+        if (!mounted) return;
+        Navigator.pop(context);
+        AppSnackbar.showSuccess(context, message: 'Session deleted successfully!');
         widget.onSuccess();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting session: $e')),
-        );
+        if (!mounted) return;
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -231,9 +230,7 @@ class _EditSessionScreenState extends State<EditSessionScreen> {
                               ? () async {
                             if (formKey.currentState!.validate() && startDate != null && endDate != null) {
                               if (endDate!.isBefore(startDate!)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('End date must be after start date')),
-                                );
+                                AppSnackbar.showWarning(context, message: 'End date must be after start date.');
                                 return;
                               }
                               try {
@@ -253,15 +250,13 @@ class _EditSessionScreenState extends State<EditSessionScreen> {
                                   endDate: endDate!,
                                   isActive: isActive,
                                 );
+                                if (!context.mounted) return;
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Session updated successfully')),
-                                );
+                                AppSnackbar.showSuccess(context, message: 'Session updated successfully!');
                                 widget.onSuccess();
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error updating session: $e')),
-                                );
+                                if (!context.mounted) return;
+                                AppSnackbar.friendlyError(context, error: e);
                               }
                             }
                           }

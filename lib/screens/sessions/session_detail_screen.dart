@@ -53,9 +53,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _errorMessage = 'Error loading terms: $e';
         });
       }
-      print('Error loading terms: $e');
+      debugPrint('Error loading terms: $e');
     }
-    return; // Explicitly return Future<void>
   }
 
   @override

@@ -11,9 +11,12 @@ import '../../core/services/section_service_api.dart';
 import '../../core/services/session_service_api.dart';
 import '../../core/services/term_service_api.dart';
 import '../../core/services/class_service_api.dart';
+import '../../core/services/class_service_api.dart';
 import '../../core/services/transaction_service_api.dart';
+import '../../core/services/fee_service_api.dart'; // Added 
 import 'dashboard_content.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/notification_badge.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -42,8 +45,8 @@ class _BursarDashboardState extends State<BursarDashboard> {
   Map<String, double> _stats = {
     'totalGenerated': 0.0,
     'totalSpent': 0.0,
-    'cashInHand': 0.0,
-    'cashInAccount': 0.0,
+    'totalFees': 0.0,
+    'outstandingDebt': 0.0,
     'balanceRemaining': 0.0,
   };
   
@@ -186,7 +189,15 @@ class _BursarDashboardState extends State<BursarDashboard> {
 
     try {
       final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+      final feeService = Provider.of<FeeServiceApi>(context, listen: false);
+
       final statsData = await transactionService.getDashboardStats(
+        sectionId: int.tryParse(_selectedSectionId!),
+        sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
+        termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
+      );
+
+      final feesData = await feeService.getFeeSummary(
         sectionId: int.tryParse(_selectedSectionId!),
         sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
         termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
@@ -198,8 +209,8 @@ class _BursarDashboardState extends State<BursarDashboard> {
         _stats = {
           'totalGenerated': (statsData['total_income'] as num?)?.toDouble() ?? 0.0,
           'totalSpent': (statsData['total_expenses'] as num?)?.toDouble() ?? 0.0,
-          'cashInHand': 0.0,
-          'cashInAccount': 0.0,
+          'totalFees': (feesData['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'outstandingDebt': (feesData['total_balance'] as num?)?.toDouble() ?? 0.0,
           'balanceRemaining': (statsData['balance'] as num?)?.toDouble() ?? 0.0,
         };
         _isLoading = false;
@@ -234,6 +245,9 @@ class _BursarDashboardState extends State<BursarDashboard> {
     return Scaffold(
       appBar: const CustomAppBar(
         title: 'Dashboard Overview',
+        actions: [
+          NotificationBadge(),
+        ],
       ),
       drawer: const CustomDrawer(),
       body: Container(

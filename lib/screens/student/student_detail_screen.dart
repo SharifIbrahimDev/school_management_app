@@ -17,7 +17,7 @@ import 'edit_student_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/loading_indicator.dart';
-import '../../core/utils/error_handler.dart';
+
 
 class StudentDetailScreen extends StatefulWidget {
   final StudentModel student;
@@ -25,7 +25,7 @@ class StudentDetailScreen extends StatefulWidget {
   const StudentDetailScreen({super.key, required this.student});
 
   @override
-  _StudentDetailScreenState createState() => _StudentDetailScreenState();
+  State<StudentDetailScreen> createState() => _StudentDetailScreenState();
 }
 
 class _StudentDetailScreenState extends State<StudentDetailScreen> {
@@ -34,6 +34,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   String? _parentName;
   bool _loadingInfo = true;
   List<Map<String, dynamic>> _fees = [];
+  List<Map<String, dynamic>> _transactions = [];
   UserModel? _currentUser;
 
   @override
@@ -59,8 +60,11 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       String? className;
       if (widget.student.classId.isNotEmpty) {
         try {
-          final classData = await classService.getClass(int.tryParse(widget.student.classId) ?? 0);
-          className = classData?['class_name'] ?? classData?['name'] ?? 'Unknown';
+          final classData = await classService.getClass(
+            int.tryParse(widget.student.classId) ?? 0,
+          );
+          className =
+              classData?['class_name'] ?? classData?['name'] ?? 'Unknown';
         } catch (e) {
           className = 'Unknown';
         }
@@ -70,10 +74,14 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
 
       // Get parent name
       String? parentName;
-      if (widget.student.parentId != null && widget.student.parentId!.isNotEmpty) {
+      if (widget.student.parentId != null &&
+          widget.student.parentId!.isNotEmpty) {
         try {
-          final parentData = await userService.getUser(int.tryParse(widget.student.parentId!) ?? 0);
-          parentName = parentData?['full_name'] ?? parentData?['fullName'] ?? 'Unknown';
+          final parentData = await userService.getUser(
+            int.tryParse(widget.student.parentId!) ?? 0,
+          );
+          parentName =
+              parentData?['full_name'] ?? parentData?['fullName'] ?? 'Unknown';
         } catch (e) {
           parentName = 'Unknown';
         }
@@ -81,21 +89,42 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         parentName = 'Not assigned';
       }
 
-      // Get fees - use first section if multiple sections assigned
-      try {
-        final primarySectionId = widget.student.sectionIds.isNotEmpty 
-          ? int.tryParse(widget.student.sectionIds.first) 
+      // Get primary section ID
+      final primarySectionId = widget.student.sectionIds.isNotEmpty
+          ? int.tryParse(widget.student.sectionIds.first)
           : null;
-        
+
+      // Get Fees
+      try {
         if (primarySectionId != null) {
           _fees = await feeService.getFees(
             sectionId: primarySectionId,
             studentId: int.tryParse(widget.student.id),
           );
+        } else {
+          _fees = [];
         }
       } catch (e) {
         debugPrint('Error loading fees: $e');
         _fees = [];
+      }
+
+      // Get transactions
+      try {
+        final studentId = int.tryParse(widget.student.id);
+        if (studentId != null) {
+          if (!mounted) return;
+          final studentService = Provider.of<StudentServiceApi>(
+            context,
+            listen: false,
+          );
+          _transactions = await studentService.getStudentTransactions(
+            studentId,
+          );
+        }
+      } catch (e) {
+        debugPrint('Error loading transactions: $e');
+        _transactions = [];
       }
 
       if (mounted) {
@@ -117,7 +146,8 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     final confirm = await ConfirmationDialog.show(
       context,
       title: 'Delete Student',
-      content: 'Are you sure you want to delete ${widget.student.fullName}? This action will remove all student records and cannot be undone.',
+      content:
+          'Are you sure you want to delete ${widget.student.fullName}? This action will remove all student records and cannot be undone.',
       confirmText: 'Delete Student',
       confirmColor: Colors.red,
       icon: Icons.person_remove_rounded,
@@ -125,13 +155,22 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
 
     if (confirm == true) {
       setState(() => _isDeleting = true);
-      
+
       try {
-        final studentService = Provider.of<StudentServiceApi>(context, listen: false);
-        await studentService.deleteStudent(int.tryParse(widget.student.id) ?? 0);
-        
+        if (!mounted) return;
+        final studentService = Provider.of<StudentServiceApi>(
+          context,
+          listen: false,
+        );
+        await studentService.deleteStudent(
+          int.tryParse(widget.student.id) ?? 0,
+        );
+
         if (mounted) {
-          AppSnackbar.showSuccess(context, message: 'Student deleted successfully');
+          AppSnackbar.showSuccess(
+            context,
+            message: 'Student deleted successfully',
+          );
           Navigator.pop(context);
         }
       } catch (e) {
@@ -158,7 +197,8 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StudentSectionLinkingScreen(student: widget.student),
+                  builder: (_) =>
+                      StudentSectionLinkingScreen(student: widget.student),
                 ),
               );
               if (result == true && mounted) {
@@ -204,7 +244,9 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     }
 
     // 3. Assign Parent (Proprietor, Principal, Bursar)
-    if (role == UserRole.proprietor || role == UserRole.principal || role == UserRole.bursar) {
+    if (role == UserRole.proprietor ||
+        role == UserRole.principal ||
+        role == UserRole.bursar) {
       if (actionButtons.isNotEmpty) actionButtons.add(const SizedBox(width: 8));
       actionButtons.add(
         Expanded(
@@ -217,7 +259,8 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AssignParentScreen(student: widget.student),
+                  builder: (context) =>
+                      AssignParentScreen(student: widget.student),
                 ),
               ).then((result) {
                 if (result == true) {
@@ -260,9 +303,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     }
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: widget.student.fullName,
-      ),
+      appBar: CustomAppBar(title: widget.student.fullName),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -283,7 +324,11 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         ),
         child: SafeArea(
           child: _loadingInfo
-              ? const Center(child: LoadingIndicator(message: 'Fetching student record...'))
+              ? const Center(
+                  child: LoadingIndicator(
+                    message: 'Fetching student record...',
+                  ),
+                )
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -293,7 +338,9 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                       if (_fees.isNotEmpty) ...[
                         Text(
                           'Assigned Fees',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Container(
@@ -301,20 +348,35 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                             context: context,
                             opacity: 0.6,
                             borderRadius: 12,
-                            borderColor: theme.dividerColor.withValues(alpha: 0.1),
+                            borderColor: theme.dividerColor.withValues(
+                              alpha: 0.1,
+                            ),
                           ),
                           child: ListView.separated(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: _fees.length,
-                            separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.2)),
+                            separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              color: theme.dividerColor.withValues(alpha: 0.2),
+                            ),
                             itemBuilder: (context, index) {
                               final fee = _fees[index];
                               return ListTile(
-                                leading: const Icon(Icons.payment, color: AppTheme.primaryColor),
-                                title: Text(fee['fee_type'] ?? fee['feeType'] ?? 'Fee'),
-                                subtitle: Text('Amount: ${Formatters.formatCurrency((fee['amount'] as num?)?.toDouble() ?? 0.0)}'),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                                leading: const Icon(
+                                  Icons.payment,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                title: Text(
+                                  fee['fee_type'] ?? fee['feeType'] ?? 'Fee',
+                                ),
+                                subtitle: Text(
+                                  'Amount: ${Formatters.formatCurrency((fee['amount'] as num?)?.toDouble() ?? 0.0)}',
+                                ),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                ),
                               );
                             },
                           ),
@@ -330,7 +392,9 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                           opacity: 0.7,
                           borderRadius: 24,
                           hasGlow: true,
-                          borderColor: theme.dividerColor.withValues(alpha: 0.1),
+                          borderColor: theme.dividerColor.withValues(
+                            alpha: 0.1,
+                          ),
                         ),
                         child: Column(
                           children: [
@@ -353,21 +417,33 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: theme.primaryColor.withValues(alpha: 0.1),
+                                    color: theme.primaryColor.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Icon(Icons.school, color: theme.primaryColor, size: 18),
+                                  child: Icon(
+                                    Icons.school,
+                                    color: theme.primaryColor,
+                                    size: 18,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Assigned Sections',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color
+                                                  ?.withValues(alpha: 0.6),
+                                            ),
                                       ),
                                       const SizedBox(height: 8),
                                       widget.student.sectionIds.isEmpty
@@ -378,26 +454,46 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                                           : Wrap(
                                               spacing: 8,
                                               runSpacing: 8,
-                                              children: widget.student.sectionIds.map((sectionId) {
-                                                return Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: AppTheme.neonTeal.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(16),
-                                                    border: Border.all(
-                                                      color: AppTheme.neonTeal.withValues(alpha: 0.3),
-                                                    ),
-                                                  ),
-                                                  child: Text(
-                                                    'Section $sectionId',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: AppTheme.neonTeal,
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList(),
+                                              children: widget
+                                                  .student
+                                                  .sectionIds
+                                                  .map((sectionId) {
+                                                    return Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 12,
+                                                            vertical: 6,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: AppTheme.neonTeal
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              16,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: AppTheme
+                                                              .neonTeal
+                                                              .withValues(
+                                                                alpha: 0.3,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        'Section $sectionId',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              AppTheme.neonTeal,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  })
+                                                  .toList(),
                                             ),
                                     ],
                                   ),
@@ -414,8 +510,12 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                             DetailItem(
                               icon: Icons.calendar_today,
                               title: 'Created',
-                              value: Formatters.formatDate(widget.student.createdAt),
+                              value: Formatters.formatDate(
+                                widget.student.createdAt,
+                              ),
                             ),
+                            const SizedBox(height: 32),
+                            _buildActivityTimeline(theme),
                           ],
                         ),
                       ),
@@ -430,11 +530,123 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  children: actionButtons,
-                ),
+                child: Row(children: actionButtons),
               ),
             ),
+    );
+  }
+
+  Widget _buildActivityTimeline(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Activity Timeline',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_transactions.isEmpty && _fees.isEmpty)
+          const Center(child: Text('No activity recorded yet'))
+        else ...[
+          _buildTimelineItem(
+            icon: Icons.person_add_alt_1_rounded,
+            color: AppTheme.neonBlue,
+            title: 'Student Admitted',
+            date: widget.student.createdAt,
+            subtitle: 'Registration completed successfully',
+          ),
+          ..._transactions.map(
+            (t) => _buildTimelineItem(
+              icon: Icons.payment_rounded,
+              color: AppTheme.neonEmerald,
+              title:
+                  'Fee Payment: ${Formatters.formatCurrency((t['amount'] as num?)?.toDouble() ?? 0)}',
+              date:
+                  DateTime.tryParse(t['transaction_date'] ?? '') ??
+                  DateTime.now(),
+              subtitle: 'Method: ${t['payment_method'] ?? 'Unknown'}',
+            ),
+          ),
+          ..._fees.map(
+            (f) => _buildTimelineItem(
+              icon: Icons.assessment_rounded,
+              color: AppTheme.neonPurple,
+              title: 'Fee Assigned: ${f['fee_name']}',
+              date: DateTime.tryParse(f['created_at'] ?? '') ?? DateTime.now(),
+              subtitle:
+                  'Amount: ${Formatters.formatCurrency((f['amount'] as num?)?.toDouble() ?? 0)}',
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTimelineItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required DateTime date,
+    required String subtitle,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              Expanded(
+                child: Container(width: 2, color: color.withValues(alpha: 0.2)),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        Formatters.formatDate(date),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textHintColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,57 +1,85 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_paystack_max/flutter_paystack_max.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_paystack_plus/flutter_paystack_plus.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'payment_service_api.dart';
+import '../../widgets/app_snackbar.dart';
 
 class PaymentService {
-  static const String _publicKey = "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // TODO: Replace with valid key
+  static String get _publicKey => dotenv.env['PAYSTACK_PUBLIC_KEY'] ?? '';
+  static String get _secretKey => dotenv.env['PAYSTACK_SECRET_KEY'] ?? '';
 
-  static Future<void> initialize() async {
-    // Paystack plugin initialization usually handled instance-wise
-  }
-
-  static Future<void> chargeCard({
+  static Future<void> processPayment({
     required BuildContext context,
     required double amount,
     required String email,
-    required String reference,
-    required Function(String) onSuccess,
-    required Function(String) onError,
+    required int studentId,
+    required int feeId,
+    required Function(String reference) onSuccess,
   }) async {
-    // Paystack is not web compatible. For now, we stub it.
-    // In a real app, you'd use Paystack's web SDK or a JS interop.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Online payments are only supported on Mobile devices.')),
-    );
-    onError('Web payments not supported');
-    /* 
     try {
-      final charge = Charge()
-        ..amount = (amount * 100).toInt() // In kobo
-        ..email = email
-        ..reference = reference
-        ..currency = 'NGN';
+      final paymentService = Provider.of<PaymentServiceApi>(context, listen: false);
 
-      // Checkout
-      CheckoutResponse response = await PaystackPlugin.checkout(
-        context,
-        method: CheckoutMethod.card, // Defaults to card and bank
-        charge: charge,
-        fullscreen: true,
-        logo: const Icon(Icons.school, size: 24),
+      // 1. Initialize payment on backend to get reference
+      final initData = await paymentService.initializePayment(
+        studentId: studentId,
+        feeId: feeId,
+        amount: amount,
+        email: email,
       );
 
-      if (response.status == true) {
-        onSuccess(response.reference ?? reference);
-      } else {
-        onError(response.message);
-      }
+      final String reference = initData['reference'];
+
+      if (!context.mounted) return;
+
+      // 2. Open Paystack popup
+      await FlutterPaystackPlus.openPaystackPopup(
+        publicKey: _publicKey,
+        secretKey: _secretKey,
+        context: context,
+        customerEmail: email,
+        amount: (amount * 100).toInt().toString(),
+        reference: reference,
+        callBackUrl: 'https://standard.paystack.co/close',
+        onClosed: () {
+          if (context.mounted) {
+            AppSnackbar.showInfo(context, message: 'Payment cancelled or window closed.');
+          }
+        },
+        onSuccess: () async {
+          // 3. Verify payment on backend
+          try {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(child: CircularProgressIndicator()),
+            );
+
+            await paymentService.verifyPayment(reference: reference);
+
+            if (!context.mounted) return;
+            Navigator.pop(context); // Close loading dialog
+
+            AppSnackbar.showSuccess(context, message: 'Payment Successful! 🎉');
+            onSuccess(reference);
+          } catch (e) {
+            if (context.mounted) {
+              Navigator.pop(context); // Close loading dialog
+              AppSnackbar.showError(context, message: 'Verification failed: $e');
+            }
+          }
+        },
+      );
     } catch (e) {
-      onError(e.toString());
+      if (context.mounted) {
+        AppSnackbar.showError(context, message: 'Payment error: $e');
+      }
     }
-    */
   }
 
   static String generateReference() {
     return 'REF-${const Uuid().v4().substring(0, 8).toUpperCase()}';
   }
 }
+

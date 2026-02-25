@@ -114,7 +114,7 @@ class _ClassListScreenState extends State<ClassListScreen> {
       confirmColor: Colors.red,
       icon: Icons.delete_outline_rounded,
     );
-
+    if (!mounted) return;
     if (confirmed == true) {
       setState(() => _isLoading = true);
       try {

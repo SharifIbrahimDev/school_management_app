@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/services/user_service_api.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ContactPickerScreen extends StatefulWidget {
   const ContactPickerScreen({super.key});
@@ -57,7 +58,7 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading contacts: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

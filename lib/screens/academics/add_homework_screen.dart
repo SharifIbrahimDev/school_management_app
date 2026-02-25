@@ -8,6 +8,7 @@ import '../../core/services/section_service_api.dart';
 import '../../core/services/subject_service_api.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class AddHomeworkScreen extends StatefulWidget {
   const AddHomeworkScreen({super.key});
@@ -64,7 +65,7 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isInitLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading classes: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -106,12 +107,12 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
   Future<void> _saveHomework() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClassId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a class')));
+      AppSnackbar.showWarning(context, message: 'Please select a class.');
       return;
     }
     // Section is optional? Usually yes, if for whole class. But let's enforce if sections exist.
     if (_sections.isNotEmpty && _selectedSectionId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a section')));
+      AppSnackbar.showWarning(context, message: 'Please select a section.');
       return;
     }
 
@@ -134,13 +135,13 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
       await service.createHomework(payload);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Homework assigned successfully!')));
+        AppSnackbar.showSuccess(context, message: 'Homework assigned successfully!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

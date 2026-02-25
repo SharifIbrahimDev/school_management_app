@@ -31,7 +31,7 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   
   String? _selectedSectionId;
   String? _selectedClassId;
-  Set<String> _additionalSectionIds = {};
+  final Set<String> _additionalSectionIds = {};
   
   List<SectionModel> _sections = [];
   List<ClassModel> _classes = [];

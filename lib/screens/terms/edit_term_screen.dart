@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +9,7 @@ import '../../core/services/auth_service_api.dart';
 import '../../core/services/term_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class EditTermScreen extends StatefulWidget {
   final TermModel term;
@@ -72,28 +73,22 @@ class _EditTermScreenState extends State<EditTermScreen> {
         ],
       ),
     );
-
+    if (!mounted) return;
     if (confirmed == true) {
       try {
         setState(() => _isLoading = true);
         await termService.deleteTerm(
           int.parse(widget.term.id),
         );
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Term deleted successfully')),
-          );
-          widget.onSuccess();
-        }
+        if (!context.mounted) return;
+        Navigator.pop(context);
+        AppSnackbar.showSuccess(context, message: 'Term deleted successfully!');
+        widget.onSuccess();
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting term: $e')),
-          );
-        }
+        if (!context.mounted) return;
+        AppSnackbar.friendlyError(context, error: e);
       } finally {
-        if (mounted) setState(() => _isLoading = false);
+        if (context.mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -252,9 +247,7 @@ class _EditTermScreenState extends State<EditTermScreen> {
                                   onPressed: () async {
                                     if (formKey.currentState!.validate() && startDate != null && endDate != null) {
                                       if (endDate!.isBefore(startDate!)) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('End date must be after start date')),
-                                        );
+                                        AppSnackbar.showWarning(context, message: 'End date must be after start date.');
                                         return;
                                       }
                                       try {
@@ -267,21 +260,19 @@ class _EditTermScreenState extends State<EditTermScreen> {
                                           endDate: endDate!,
                                           isActive: isActive,
                                         );
-                                        if (mounted) {
+                                        if (!context.mounted) return;
+                                        if (context.mounted) {
                                           Navigator.pop(context);
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Term updated successfully')),
-                                          );
+                                          AppSnackbar.showSuccess(context, message: 'Term updated successfully!');
                                           widget.onSuccess();
                                         }
                                       } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Error updating term: $e')),
-                                          );
+                                        if (!context.mounted) return;
+                                        if (context.mounted) {
+                                          AppSnackbar.friendlyError(context, error: e);
                                         }
                                       } finally {
-                                        if (mounted) setState(() => _isLoading = false);
+                                        if (context.mounted) setState(() => _isLoading = false);
                                       }
                                     }
                                   },

@@ -9,7 +9,6 @@ import '../core/services/transaction_service_api.dart';
 import '../screens/student/student_detail_screen.dart';
 import '../screens/sections/section_detail_screen.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/app_theme.dart';
 import '../screens/transactions/transaction_detail_screen.dart';
 
 /// Global search delegate for searching across the app

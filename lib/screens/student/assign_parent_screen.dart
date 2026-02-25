@@ -23,7 +23,7 @@ class AssignParentScreen extends StatefulWidget {
 }
 
 class _AssignParentScreenState extends State<AssignParentScreen> {
-  List<UserModel> _parents = [];
+
   List<UserModel> _filteredParents = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -61,7 +61,6 @@ class _AssignParentScreenState extends State<AssignParentScreen> {
 
       if (mounted) {
         setState(() {
-          _parents = parents;
           _filteredParents = parents;
           _isLoading = false;
         });

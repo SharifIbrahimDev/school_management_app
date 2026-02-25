@@ -51,10 +51,9 @@ class GlobalFilterBar extends StatelessWidget {
   void _showSessionPicker(BuildContext context) async {
     final sessionService = Provider.of<SessionServiceApi>(context, listen: false);
     final sessionsData = await sessionService.getSessions();
+    if (!context.mounted) return;
     final List<AcademicSessionModel> sessions = sessionsData.map((s) => AcademicSessionModel.fromMap(s)).toList();
     final filters = Provider.of<GlobalFilterProvider>(context, listen: false);
-
-    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -71,10 +70,9 @@ class GlobalFilterBar extends StatelessWidget {
   void _showTermPicker(BuildContext context) async {
     final termService = Provider.of<TermServiceApi>(context, listen: false);
     final termsData = await termService.getTerms();
+    if (!context.mounted) return;
     final terms = termsData.map((t) => TermModel.fromMap(t)).toList();
     final filters = Provider.of<GlobalFilterProvider>(context, listen: false);
-
-    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -91,10 +89,9 @@ class GlobalFilterBar extends StatelessWidget {
   void _showSectionPicker(BuildContext context) async {
     final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
     final sectionsData = await sectionService.getSections();
+    if (!context.mounted) return;
     final sections = sectionsData.map((s) => SectionModel.fromMap(s)).toList();
     final filters = Provider.of<GlobalFilterProvider>(context, listen: false);
-
-    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,

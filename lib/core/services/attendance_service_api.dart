@@ -132,7 +132,64 @@ class AttendanceServiceApi extends ChangeNotifier {
       return {'percentage': 0.0, 'present': 0, 'total': 0};
     } catch (e) {
       // Return empty stats on error to avoid breaking dashboard
-      return {'percentage': 0.0, 'present': 0, 'total': 0}; 
+      return {'percentage': 0.0, 'present': 0, 'total': 0};
+    }
+  }
+
+  /// Get detailed attendance list for a single student over a date range
+  Future<List<dynamic>> getStudentAttendanceHistory(
+      int studentId, {DateTime? from, DateTime? to}) async {
+    final schoolId = await StorageHelper.getSchoolId();
+    if (schoolId == null) throw Exception('School ID not found');
+
+    try {
+      final queryParams = <String, String>{};
+      if (from != null) queryParams['from'] = DateFormat('yyyy-MM-dd').format(from);
+      if (to != null)   queryParams['to']   = DateFormat('yyyy-MM-dd').format(to);
+
+      final response = await _apiService.get(
+        ApiConfig.studentAttendance(schoolId, studentId),
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      if (response['data'] is List) {
+        return List<dynamic>.from(response['data']);
+      }
+      return List<dynamic>.from(response as List? ?? []);
+    } catch (e) {
+      return [];
+    }
+  }
+  /// Get attendance history for a class/section over a date range
+  Future<List<dynamic>> getAttendanceHistory({
+    int? classId,
+    int? sectionId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final schoolId = await StorageHelper.getSchoolId();
+    if (schoolId == null) throw Exception('School ID not found');
+
+    try {
+      final queryParams = <String, String>{
+        'from': DateFormat('yyyy-MM-dd').format(from),
+        'to': DateFormat('yyyy-MM-dd').format(to),
+      };
+      
+      if (classId != null) queryParams['class_id'] = classId.toString();
+      if (sectionId != null) queryParams['section_id'] = sectionId.toString();
+
+      final response = await _apiService.get(
+        '${ApiConfig.attendance(schoolId)}/history',
+        queryParameters: queryParams,
+      );
+
+      final data = List<dynamic>.from(response['data'] ?? (response is List ? response : []));
+      return data;
+    } catch (e) {
+      debugPrint('Error loading attendance history: $e');
+      return [];
     }
   }
 }
+

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-// import 'package:flutter_paystack_max/flutter_paystack_max.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/services/fee_service_api.dart';
 import '../../core/services/payment_service_api.dart';
+import '../../core/services/payment_service.dart';
 import '../../core/models/payment_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../core/utils/formatters.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ParentFeeScreen extends StatefulWidget {
   final int studentId;
@@ -27,7 +28,6 @@ class ParentFeeScreen extends StatefulWidget {
 
 class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // final plugin = PaystackPlugin();
   bool _isLoading = true;
   List<Map<String, dynamic>> _fees = [];
   List<PaymentModel> _payments = [];
@@ -60,9 +60,7 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -231,9 +229,35 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
   }
 
   Future<void> _initiatePayment(Map<String, dynamic> fee) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Payments are only supported on Mobile devices.')),
+    final authService = Provider.of<AuthServiceApi>(context, listen: false);
+
+    final email = authService.currentUserModel?.email;
+    if (email == null || email.isEmpty) {
+      if (mounted) {
+        AppSnackbar.showError(context, message: 'User email not found. Cannot process payment.');
+      }
+      return;
+    }
+
+    final int? feeId = fee['id'] is int ? fee['id'] : int.tryParse(fee['id'].toString());
+    final double amount = (fee['balance'] ?? fee['amount'] ?? 0).toDouble();
+
+    if (feeId == null || amount <= 0) {
+      if (mounted) {
+        AppSnackbar.showError(context, message: 'Invalid fee or no balance due.');
+      }
+      return;
+    }
+
+    await PaymentService.processPayment(
+      context: context,
+      amount: amount,
+      email: email,
+      studentId: widget.studentId,
+      feeId: feeId,
+      onSuccess: (reference) {
+        _loadData();
+      },
     );
   }
 }
-

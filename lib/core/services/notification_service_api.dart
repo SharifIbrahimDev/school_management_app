@@ -16,20 +16,49 @@ class NotificationServiceApi extends ChangeNotifier {
         queryParameters: queryParams,
       );
 
-      final List<dynamic> data = response as List? ?? (response['data'] ?? []);
-      return data.map((item) => NotificationModel.fromMap(item)).toList();
+      // API returns { success: true, data: { data: [...] } } or { success: true, data: [...] }
+      List<dynamic> data = [];
+      final innerData = response['data'];
+      if (innerData is List) {
+        data = innerData;
+      } else if (innerData is Map) {
+        final nestedData = innerData['data'];
+        if (nestedData is List) {
+          data = nestedData;
+        }
+      }
+      return data.map((item) => NotificationModel.fromMap(item as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Error fetching notifications: $e');
     }
   }
 
+  int _unreadCount = 0;
+  int get unreadCount => _unreadCount;
+
   /// Get unread notification count
   Future<int> getUnreadCount() async {
     try {
       final response = await _apiService.get(ApiConfig.notificationsUnreadCount);
-      return (response['count'] ?? 0) as int;
+      // Handle various response shapes
+      int count = 0;
+      final dynamic data = response['data'];
+      if (data is Map) {
+        count = int.tryParse((data['count'] ?? data['unread_count'] ?? 0).toString()) ?? 0;
+      } else if (data is int) {
+        count = data;
+      } else if (data is String) {
+        count = int.tryParse(data) ?? 0;
+      }
+      // Also check top-level
+      if (count == 0) {
+        count = int.tryParse((response['count'] ?? response['unread_count'] ?? 0).toString()) ?? 0;
+      }
+      _unreadCount = count;
+      notifyListeners();
+      return count;
     } catch (e) {
-      throw Exception('Error getting unread count: $e');
+      return _unreadCount; // Return cached count on error
     }
   }
 

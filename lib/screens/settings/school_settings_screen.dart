@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/school_service_api.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../core/utils/app_theme.dart';
-import '../../core/utils/responsive_utils.dart';
+
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/responsive_widgets.dart';
@@ -122,13 +122,7 @@ class _SchoolSettingsScreenState extends State<SchoolSettingsScreen> {
     }
   }
 
-  void _filterBanks(String query) {
-    setState(() {
-      _filteredBanks = _banks
-          .where((bank) => bank['name'].toString().toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    });
-  }
+
 
   void _showBankPicker() {
     _bankSearchController.clear();

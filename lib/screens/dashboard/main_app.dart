@@ -17,9 +17,17 @@ import 'principal_dashboard.dart';
 import 'bursar_dashboard.dart';
 import 'teacher_dashboard_screen.dart';
 import 'parent_dashboard_screen.dart';
+import '../academics/attendance_screen.dart';
+import '../academics/attendance_history_screen.dart';
+import '../academics/exams_list_screen.dart';
+import '../academics/teacher_homework_screen.dart';
 import '../profile/profile_screen.dart';
 import '../settings/school_settings_screen.dart';
 import '../../widgets/custom_drawer.dart';
+import 'parent/parent_attendance_screen.dart';
+import 'parent/parent_academics_screen.dart';
+import 'parent/parent_finance_screen.dart';
+import '../messages/messages_screen.dart';
 
 class MainApp extends StatefulWidget {
   final String userId;
@@ -121,6 +129,7 @@ class _MainAppState extends State<MainApp> {
       case UserRole.principal:
         return [
           PrincipalDashboard(schoolId: widget.schoolId),
+          const AttendanceHistoryScreen(),           // Attendance history
           const SectionListScreen(),
           StudentListScreen(schoolId: widget.schoolId, sectionId: '', classId: ''),
           AcademicSessionsScreen(),
@@ -141,12 +150,19 @@ class _MainAppState extends State<MainApp> {
             schoolId: widget.schoolId,
             authService: widget.authService,
           ),
-          const SectionListScreen(), // For browsing content
+          const AttendanceScreen(),
+          const ExamsListScreen(),
+          const TeacherHomeworkScreen(),
+          const MessagesScreen(),
           ProfileScreen(),
         ];
       case UserRole.parent:
         return [
           ParentDashboardScreen(parentId: widget.userId, schoolId: widget.schoolId),
+          ParentAttendanceScreen(parentId: widget.userId, schoolId: widget.schoolId),
+          ParentAcademicsScreen(parentId: widget.userId, schoolId: widget.schoolId),
+          ParentFinanceScreen(parentId: widget.userId, schoolId: widget.schoolId),
+          const MessagesScreen(),
           ProfileScreen(),
         ];
     }
@@ -173,6 +189,7 @@ class _MainAppState extends State<MainApp> {
         break;
       case UserRole.principal:
         items.addAll([
+          const BottomNavigationBarItem(icon: Icon(Icons.how_to_reg_rounded), label: 'Attendance'),
           const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Sections'),
           const BottomNavigationBarItem(icon: Icon(Icons.groups_rounded), label: 'Students'),
           const BottomNavigationBarItem(icon: Icon(Icons.event_note_rounded), label: 'Sessions'),
@@ -187,11 +204,19 @@ class _MainAppState extends State<MainApp> {
         break;
       case UserRole.teacher:
         items.addAll([
-          const BottomNavigationBarItem(icon: Icon(Icons.auto_stories_rounded), label: 'Academics'),
+          const BottomNavigationBarItem(icon: Icon(Icons.how_to_reg_rounded), label: 'Attendance'),
+          const BottomNavigationBarItem(icon: Icon(Icons.quiz_rounded), label: 'Exams'),
+          const BottomNavigationBarItem(icon: Icon(Icons.assignment_rounded), label: 'Homework'),
+          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
         ]);
         break;
       case UserRole.parent:
-        // Parents might only have Home + Profile initially
+        items.addAll([
+          const BottomNavigationBarItem(icon: Icon(Icons.calendar_today_rounded), label: 'Attendance'),
+          const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Academics'),
+          const BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'Finance'),
+          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
+        ]);
         break;
     }
 

@@ -7,6 +7,7 @@ import '../../core/services/notification_service_api.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_display_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -64,9 +65,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await _loadNotifications();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -77,15 +76,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await service.markAllAsRead();
       await _loadNotifications();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All notifications marked as read')),
-        );
+        AppSnackbar.showSuccess(context, message: 'All notifications marked as read');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -97,9 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await _loadNotifications();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

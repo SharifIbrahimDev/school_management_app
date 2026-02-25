@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/services/message_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class BroadcastScreen extends StatefulWidget {
   final String? sectionId;
@@ -30,9 +31,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
   Future<void> _handleBroadcast() async {
     if (!_formKey.currentState!.validate()) return;
     if (widget.sectionId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: No section selected.')),
-      );
+      AppSnackbar.showWarning(context, message: 'Please select a section first.');
       return;
     }
 
@@ -48,16 +47,12 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Broadcast sent to all ${_selectedRole}s!')),
-        );
+        AppSnackbar.showSuccess(context, message: 'Broadcast sent to all ${_selectedRole}s!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     } finally {
       if (mounted) setState(() => _isSending = false);

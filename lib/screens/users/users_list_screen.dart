@@ -11,6 +11,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display_widget.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class UsersListScreen extends StatefulWidget {
   const UsersListScreen({super.key});
@@ -259,7 +260,10 @@ class _UsersListScreenState extends State<UsersListScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: LoadingIndicator(message: 'Loading users...'))
+                  ? ListView.builder(
+                      itemCount: 8,
+                      itemBuilder: (context, index) => const ListItemSkeletonLoader(),
+                    )
                   : _errorMessage != null
                       ? ErrorDisplayWidget(
                           error: _errorMessage!,

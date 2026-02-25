@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service_api.dart';
-import '../../core/services/api_service.dart';
 import '../../core/utils/app_theme.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/loading_indicator.dart';
-import 'auth_wrapper.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../core/utils/storage_helper.dart';
@@ -88,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await StorageHelper.clearCredentials();
       }
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       setState(() => _isLoading = false);
       AppSnackbar.showSuccess(context, message: 'Login successful!');
@@ -97,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // This ensures we always have AuthWrapper at the root, even if we were on a standalone login route.
       Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
     } catch (e, stackTrace) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       setState(() => _isLoading = false);
       ErrorHandler.handleError(e, context, stackTrace);
     }

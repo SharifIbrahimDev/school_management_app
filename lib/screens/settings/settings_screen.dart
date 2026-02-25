@@ -5,6 +5,7 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/utils/app_theme.dart';
 
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 /// Settings screen for app configuration
 class SettingsScreen extends StatefulWidget {
@@ -109,27 +110,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Icons.policy_outlined,
                 'Privacy Policy',
                 () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Privacy Policy coming soon')),
-                  );
+                  AppSnackbar.showInfo(context, message: 'Privacy Policy coming soon.');
                 },
               ),
               _buildActionTile(
                 Icons.description_outlined,
                 'Terms of Service',
                 () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Terms of Service coming soon')),
-                  );
+                  AppSnackbar.showInfo(context, message: 'Terms of Service coming soon.');
                 },
               ),
               _buildActionTile(
                 Icons.support_agent_outlined,
                 'Contact Support',
                 () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contact: support@schoolapp.com')),
-                  );
+                  AppSnackbar.showInfo(context, message: 'Contact: support@schoolapp.com');
                 },
               ),
               
@@ -321,19 +316,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             RadioListTile<String>(
               title: const Text('Light'),
               value: 'light',
+              // ignore: deprecated_member_use
               groupValue: settings.themeMode,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
               title: const Text('Dark'),
               value: 'dark',
+              // ignore: deprecated_member_use
               groupValue: settings.themeMode,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
               title: const Text('System Default'),
               value: 'system',
+              // ignore: deprecated_member_use
               groupValue: settings.themeMode,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
           ],
@@ -357,19 +358,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             RadioListTile<String>(
               title: const Text('English'),
               value: 'en',
+              // ignore: deprecated_member_use
               groupValue: settings.language,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
               title: const Text('Français'),
               value: 'fr',
+              // ignore: deprecated_member_use
               groupValue: settings.language,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
               title: const Text('العربية'),
               value: 'ar',
+              // ignore: deprecated_member_use
               groupValue: settings.language,
+              // ignore: deprecated_member_use
               onChanged: (value) => Navigator.pop(context, value),
             ),
           ],
@@ -380,11 +387,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (selected != null) {
       await settings.setLanguage(selected);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Language will be applied in next version'),
-          ),
-        );
+        AppSnackbar.showInfo(context, message: 'Language will be applied in next version.');
       }
     }
   }
@@ -411,11 +414,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true) {
       await settings.resetToDefaults();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings reset to defaults')),
-      );
+      if (!mounted) return;
+      AppSnackbar.showSuccess(context, message: 'Settings reset to defaults.');
     }
   }
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/section_model.dart';
 import '../../core/models/user_model.dart';
@@ -64,13 +64,13 @@ class _EditSectionScreenState extends State<EditSectionScreen> {
         aboutSection: _aboutController.text.trim(),
       );
 
-      if (mounted) {
+      if (context.mounted) {
         setState(() => _isLoading = false);
         Navigator.pop(context, true);
         AppSnackbar.showSuccess(context, message: 'Section updated successfully');
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         setState(() => _isLoading = false);
         AppSnackbar.showError(context, message: 'Error: $e');
       }

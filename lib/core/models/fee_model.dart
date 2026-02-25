@@ -10,7 +10,7 @@ class FeeModel {
   final String studentId;
   final String feeType;
   final double amount;
-  final double amountPaid;
+  final double balance;
   final DateTime dueDate;
   final FeeStatus status;
   final DateTime createdAt;
@@ -30,7 +30,7 @@ class FeeModel {
     required this.studentId,
     required this.feeType,
     required this.amount,
-    this.amountPaid = 0.0,
+    this.balance = 0.0,
     required this.dueDate,
     this.status = FeeStatus.pending,
     required this.createdAt,
@@ -52,7 +52,7 @@ class FeeModel {
       'studentId': studentId,
       'feeType': feeType,
       'amount': amount,
-      'amountPaid': amountPaid,
+      'balance': balance,
       'dueDate': dueDate.toIso8601String(),
       'status': status.toString().split('.').last,
       'createdAt': createdAt.toIso8601String(),
@@ -75,7 +75,7 @@ class FeeModel {
       studentId: map['studentId'] ?? '',
       feeType: map['feeType'] ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      amountPaid: (map['amountPaid'] as num?)?.toDouble() ?? 0.0,
+      balance: (map['balance'] ?? map['amount'] as num?)?.toDouble() ?? 0.0,
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : DateTime.now(),
       status: FeeStatus.values.firstWhere(
             (e) => e.toString().split('.').last == map['status'],
@@ -108,7 +108,7 @@ class FeeModel {
     String? studentId,
     String? feeType,
     double? amount,
-    double? amountPaid,
+    double? balance,
     DateTime? dueDate,
     FeeStatus? status,
     DateTime? createdAt,
@@ -128,7 +128,7 @@ class FeeModel {
       studentId: studentId ?? this.studentId,
       feeType: feeType ?? this.feeType,
       amount: amount ?? this.amount,
-      amountPaid: amountPaid ?? this.amountPaid,
+      balance: balance ?? this.balance,
       dueDate: dueDate ?? this.dueDate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -140,8 +140,8 @@ class FeeModel {
     );
   }
 
-  double get balance => amount - amountPaid;
-  bool get isFullyPaid => amountPaid >= amount;
+  bool get isFullyPaid => balance <= 0 || status == FeeStatus.paid;
+  double get amountPaid => amount - balance;
   
   // Backward compatibility alias
   String get name => feeType;

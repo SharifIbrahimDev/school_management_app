@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../core/enums/fee_scope.dart';
@@ -66,17 +66,16 @@ class _EditFeeScreenState extends State<EditFeeScreen> {
       // Fetch sessions
       final sessions = await sessionService.getSessions(sectionId: int.tryParse(widget.sectionId));
       
-      if (mounted) {
+      if (context.mounted) {
         setState(() {
           _cachedSessions = sessions;
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        AppSnackbar.showError(context, message: 'Error loading data: $e');
-        setState(() => _isLoading = false);
-      }
+      if (!mounted) return;
+      AppSnackbar.showError(context, message: 'Error loading data: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -494,12 +493,12 @@ class _EditFeeScreenState extends State<EditFeeScreen> {
                               description: _description,
                             );
     
-                            if (mounted) {
+                            if (context.mounted) {
                               AppSnackbar.showSuccess(context, message: 'Fee updated successfully');
                               Navigator.pop(context, true);
                             }
                           } catch (e) {
-                            if (mounted) {
+                            if (context.mounted) {
                               AppSnackbar.showError(context, message: 'Error updating fee: $e');
                               setState(() => _isLoading = false);
                             }

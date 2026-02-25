@@ -61,8 +61,8 @@ class GlobalSearchDelegate extends SearchDelegate {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        final studentsData = (snapshot.data?[0] ?? []) as List<Map<String, dynamic>>;
-        final transactionsData = (snapshot.data?[1] ?? []) as List<Map<String, dynamic>>;
+        final studentsData = snapshot.data?[0] ?? [];
+        final transactionsData = snapshot.data?[1] ?? [];
 
         final students = studentsData.map((s) => StudentModel.fromMap(s)).toList();
         final transactions = transactionsData.map((t) => TransactionModel.fromMap(t)).toList();
@@ -117,7 +117,7 @@ class GlobalSearchDelegate extends SearchDelegate {
                     size: 18,
                   ),
                 ),
-                title: Text(transaction.category ?? transaction.type),
+                title: Text(transaction.category),
                 subtitle: Text(Formatters.formatDate(transaction.transactionDate)),
                 trailing: Text(
                   Formatters.formatCurrency(transaction.amount),

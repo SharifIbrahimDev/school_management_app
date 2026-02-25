@@ -10,6 +10,7 @@ import 'add_session_screen.dart';
 import 'edit_session_screen.dart';
 import 'session_detail_screen.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/app_snackbar.dart';
 
 class SessionListView extends StatefulWidget {
   final List<SectionModel> assignedSections;
@@ -77,7 +78,9 @@ class _SessionListViewState extends State<SessionListView> {
         ],
       ),
     );
+
     if (confirmed == true) {
+      if (!context.mounted) return;
       try {
         final sessionService = Provider.of<SessionServiceApi>(context, listen: false);
         final authService = Provider.of<AuthServiceApi>(context, listen: false);
@@ -87,14 +90,12 @@ class _SessionListViewState extends State<SessionListView> {
           sectionId: session.sectionId,
           sessionId: session.id,
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session deleted successfully')),
-        );
+        if (!context.mounted) return;
+        AppSnackbar.showSuccess(context, message: 'Session deleted successfully!');
         _loadSessions();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting session: $e')),
-        );
+        if (!context.mounted) return;
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

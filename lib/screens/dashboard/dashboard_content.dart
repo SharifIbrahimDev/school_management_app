@@ -28,6 +28,7 @@ import '../../widgets/error_display_widget.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../sections/add_section_screen.dart';
 import '../sessions/add_session_screen.dart';
+import '../../widgets/app_snackbar.dart';
 
 class DashboardContent extends StatefulWidget {
   final List<SectionModel> sections;
@@ -231,8 +232,26 @@ class _DashboardContentState extends State<DashboardContent> {
   }
 
   Widget _buildWelcomeHeader(BuildContext context, AuthServiceApi authService) {
+    final userMap = authService.currentUser;
     final user = authService.currentUserModel;
     final name = user?.fullName.split(' ').first ?? widget.role;
+
+    String getNames(String key, String nameField) {
+      if (userMap != null && userMap[key] is List) {
+        final list = userMap[key] as List;
+        if (list.isNotEmpty) {
+          final names = list.map((e) {
+            if (e is Map) return e[nameField] ?? e['name'] ?? e['id'].toString();
+            return e.toString();
+          }).where((s) => s != 'null' && s.isNotEmpty).toList();
+          if (names.isNotEmpty) return names.join(', ');
+        }
+      }
+      return '';
+    }
+
+    final sectionsDisplay = getNames('assigned_sections', 'section_name');
+    final classesDisplay = getNames('assigned_classes', 'class_name');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -252,20 +271,19 @@ class _DashboardContentState extends State<DashboardContent> {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [AppTheme.primaryColor, AppTheme.neonBlue],
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 10,
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -275,47 +293,66 @@ class _DashboardContentState extends State<DashboardContent> {
                 name[0].toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Welcome back,",
-                  maxLines: 1,
+                  "Hello,",
                   style: TextStyle(
                     fontSize: 14,
                     color: AppTheme.textSecondaryColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
+                    letterSpacing: -1.0,
                   ),
                 ),
-                const SizedBox(height: 8),
-                _buildRoleBadge(context),
+                if (sectionsDisplay.isNotEmpty || classesDisplay.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (sectionsDisplay.isNotEmpty) "Section: $sectionsDisplay",
+                      if (classesDisplay.isNotEmpty) "Class: $classesDisplay"
+                    ].join(' • '),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.primaryColor.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
+          if (context.isDesktop)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.neonEmerald.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.wb_sunny_rounded, color: AppTheme.neonEmerald, size: 28),
+            ),
         ],
       ),
     );
   }
+
 
   Widget _buildRoleBadge(BuildContext context) {
     final colorMap = {
@@ -561,8 +598,8 @@ class _DashboardContentState extends State<DashboardContent> {
         FinancialBarChart(
           totalIncome: widget.dashboardStats['totalGenerated'] ?? 0.0,
           totalExpenses: widget.dashboardStats['totalSpent'] ?? 0.0,
-          cashInHand: widget.dashboardStats['cashInHand'] ?? 0.0,
-          bankBalance: widget.dashboardStats['cashInAccount'] ?? 0.0,
+          cashInHand: widget.dashboardStats['totalFees'] ?? 0.0,
+          bankBalance: widget.dashboardStats['outstandingDebt'] ?? 0.0,
         ),
         const SizedBox(height: 24),
         ResponsiveGridView(
@@ -592,16 +629,17 @@ class _DashboardContentState extends State<DashboardContent> {
               isPositive: false,
             ),
             DashboardCard(
-              title: 'Cash In Hand',
-              value: Formatters.formatCurrency((widget.dashboardStats['cashInHand'] ?? 0).toDouble()),
-              icon: Icons.account_balance_wallet_rounded,
+              title: 'Total Fees Invoiced',
+              value: Formatters.formatCurrency((widget.dashboardStats['totalFees'] ?? 0).toDouble()),
+              icon: Icons.receipt_long_rounded,
               color: AppTheme.neonBlue,
             ),
             DashboardCard(
-              title: 'Bank Balance',
-              value: Formatters.formatCurrency((widget.dashboardStats['cashInAccount'] ?? 0).toDouble()),
-              icon: Icons.account_balance_rounded,
-              color: AppTheme.neonPurple,
+              title: 'Outstanding Debt',
+              value: Formatters.formatCurrency((widget.dashboardStats['outstandingDebt'] ?? 0).toDouble()),
+              icon: Icons.warning_amber_rounded,
+              color: Colors.orange,
+              isPositive: false,
             ),
           ],
         ),
@@ -823,7 +861,7 @@ class _DashboardContentState extends State<DashboardContent> {
 
   void _navigateToAddEntry(BuildContext context) {
     if (_activeSectionId == null || widget.selectedTermId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a section and term first.')));
+      AppSnackbar.showWarning(context, message: 'Please select a section and term first.');
       return;
     }
     Navigator.push(
@@ -874,7 +912,7 @@ class _DashboardContentState extends State<DashboardContent> {
       selectedScope = FeeScope.school;
       effectiveSectionId = null;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select the required parameters (e.g., section, class, or student)')));
+      AppSnackbar.showWarning(context, message: 'Please select the required parameters (e.g., section, class, or student).');
       return;
     }
 

@@ -115,6 +115,27 @@ class AppTheme {
     );
   }
 
+  static BoxDecoration mainGradientDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      image: const DecorationImage(
+        image: AssetImage('assets/images/auth_bg_pattern.png'),
+        fit: BoxFit.cover,
+        opacity: 0.05,
+      ),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          primaryColor.withValues(alpha: 0.1),
+          accentColor.withValues(alpha: 0.2),
+          isDark ? const Color(0xFF1E293B) : Colors.white,
+        ],
+        stops: const [0.0, 0.4, 1.0],
+      ),
+    );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

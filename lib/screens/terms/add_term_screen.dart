@@ -9,6 +9,7 @@ import '../../core/services/term_service_api.dart';
 import '../../widgets/confirmation_dialog.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class AddTermScreen extends StatefulWidget {
   final AcademicSessionModel session;
@@ -44,17 +45,13 @@ class _AddTermScreenState extends State<AddTermScreen> {
   Future<void> _addTerm() async {
     if (!formKey.currentState!.validate() || startDate == null || endDate == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all required fields')),
-        );
+        AppSnackbar.showWarning(context, message: 'Please fill all required fields.');
       }
       return;
     }
     if (endDate!.isBefore(startDate!)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('End date must be after start date')),
-        );
+        AppSnackbar.showWarning(context, message: 'End date must be after start date.');
       }
       return;
     }
@@ -81,17 +78,13 @@ class _AddTermScreenState extends State<AddTermScreen> {
         endDate: endDate!,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Term added successfully')),
-        );
+        AppSnackbar.showSuccess(context, message: 'Term added successfully!');
         Navigator.pop(context);
         widget.onSuccess();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding term: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

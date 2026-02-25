@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/message_model.dart';
 import '../../core/services/message_service_api.dart';
+import '../../widgets/app_snackbar.dart';
 import 'compose_message_screen.dart';
 
 class MessageDetailScreen extends StatelessWidget {
@@ -190,9 +191,7 @@ class MessageDetailScreen extends StatelessWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                  AppSnackbar.friendlyError(context, error: e);
                 }
               }
             },

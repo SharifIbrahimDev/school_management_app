@@ -15,61 +15,67 @@ class _NotificationBadgeState extends State<NotificationBadge> {
   @override
   void initState() {
     super.initState();
-    // Initial fetch of unread count
+    // Fetch unread count once after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotificationServiceApi>(context, listen: false).getUnreadCount();
+      if (mounted) {
+        Provider.of<NotificationServiceApi>(context, listen: false).getUnreadCount();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Consumer<NotificationServiceApi>(
-        builder: (context, service, child) {
-          return FutureBuilder<int>(
-            future: service.getUnreadCount(),
-            builder: (context, snapshot) {
-              final count = snapshot.data ?? 0;
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                   Icon(Icons.notifications_outlined, color: widget.color),
-                  if (count > 0)
-                    Positioned(
-                      right: -4,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          count > 9 ? '9+' : count.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+    return Consumer<NotificationServiceApi>(
+      builder: (context, service, _) {
+        final count = service.unreadCount;
+        return IconButton(
+          tooltip: 'Notifications',
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                count > 0 ? Icons.notifications_rounded : Icons.notifications_outlined,
+                color: widget.color ?? Colors.white,
+              ),
+              if (count > 0)
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
-                ],
-              );
-            },
-          );
-        },
-      ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      count > 99 ? '99+' : count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            ).then((_) {
+              // Refresh count after returning from notifications screen
+              if (context.mounted) {
+                Provider.of<NotificationServiceApi>(context, listen: false).getUnreadCount();
+              }
+            });
+          },
         );
       },
     );

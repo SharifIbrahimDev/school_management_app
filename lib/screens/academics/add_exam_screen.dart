@@ -270,7 +270,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
     required String label,
     required String? value,
     required List<DropdownMenuItem<String>> items,
-    required ValueChanged<String?> onChanged,
+    required ValueChanged<String?>? onChanged,
   }) {
     return Container(
       decoration: AppTheme.glassDecoration(context: context, opacity: 0.1, borderRadius: 16),

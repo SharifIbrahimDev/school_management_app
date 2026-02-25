@@ -106,8 +106,6 @@ class _DebtorsListScreenState extends State<DebtorsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     return Scaffold(
       appBar: const CustomAppBar(
         title: 'Outstanding Fees',

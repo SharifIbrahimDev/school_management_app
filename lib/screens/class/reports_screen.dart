@@ -99,7 +99,7 @@ class _ParentReportScreenState extends State<ParentReportScreen> {
                     .toList();
 
                 final totalAssigned = allFees.fold(0.0, (sum, fee) => sum + fee.amount);
-                final totalPaid = allFees.fold(0.0, (sum, fee) => sum + fee.amountPaid);
+                final totalPaid = allFees.fold(0.0, (sum, fee) => sum + (fee.amount - fee.balance));
                 final totalOutstanding = totalAssigned - totalPaid;
 
                 return SingleChildScrollView(

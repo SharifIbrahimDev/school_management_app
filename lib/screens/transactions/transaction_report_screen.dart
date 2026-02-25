@@ -23,6 +23,7 @@ import '../../core/services/student_service_api.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/responsive_widgets.dart';
+import '../../widgets/app_snackbar.dart';
 
 class TransactionReportScreen extends StatefulWidget {
   final String? sectionId;
@@ -240,6 +241,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
 
       String? studentName;
       if (t.studentId != null) {
+        if (!mounted) return;
         final studentService = Provider.of<StudentServiceApi>(context, listen: false);
         final studentData = await studentService.getStudent(int.tryParse(t.studentId!) ?? 0);
         if (studentData != null) {
@@ -255,7 +257,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Print failed: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     } finally {
       if (mounted) setState(() => _isPrinting = false);
@@ -352,7 +354,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
                                           children: [
                                             if (_sections.isNotEmpty)
                                               DropdownButtonFormField<String>(
-                                                value: _selectedSectionId,
+                                                initialValue: _selectedSectionId,
                                                 decoration: const InputDecoration(labelText: 'Section'),
                                                 items: _sections.map((s) => DropdownMenuItem(value: s.id, child: Text(s.sectionName))).toList(),
                                                 onChanged: (value) async {
@@ -368,7 +370,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
                                             if (_sessions.isNotEmpty) ...[
                                               const SizedBox(height: 16),
                                               DropdownButtonFormField<String>(
-                                                value: _selectedSessionId,
+                                                initialValue: _selectedSessionId,
                                                 decoration: const InputDecoration(labelText: 'Session'),
                                                 items: _sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.sessionName))).toList(),
                                                 onChanged: (value) async {
@@ -384,7 +386,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
                                             if (_terms.isNotEmpty) ...[
                                               const SizedBox(height: 16),
                                               DropdownButtonFormField<String>(
-                                                value: _selectedTermId,
+                                                initialValue: _selectedTermId,
                                                 decoration: const InputDecoration(labelText: 'Term'),
                                                 items: _terms.map((t) => DropdownMenuItem(value: t.id, child: Text(t.termName))).toList(),
                                                 onChanged: (value) {
@@ -395,7 +397,7 @@ class _TransactionReportScreenState extends State<TransactionReportScreen> {
                                             ],
                                             const SizedBox(height: 16),
                                             DropdownButtonFormField<String>(
-                                              value: _selectedTransactionType,
+                                              initialValue: _selectedTransactionType,
                                               decoration: const InputDecoration(labelText: 'Type'),
                                               items: const [
                                                 DropdownMenuItem(value: null, child: Text('All')),

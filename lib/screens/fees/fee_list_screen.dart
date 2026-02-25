@@ -20,6 +20,7 @@ import 'add_fee_screen.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/responsive_widgets.dart';
 
@@ -233,9 +234,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
   @override
   Widget build(BuildContext context) {
     final role = _currentUser?.role;
-    final canAddFee = role == UserRole.proprietor || 
-                      role == UserRole.principal || 
-                      role == UserRole.bursar;
+    final canAddFee = role == UserRole.proprietor;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -324,7 +323,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                         context,
                                         label: 'Section',
                                         child: DropdownButtonFormField<String>(
-                                          value: _selectedSectionId,
+                                          initialValue: _selectedSectionId,
                                           decoration: const InputDecoration(border: InputBorder.none),
                                           items: _sections.map((s) => DropdownMenuItem(value: s.id, child: Text(s.sectionName))).toList(),
                                           onChanged: (value) {
@@ -339,7 +338,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                         context,
                                         label: 'Session',
                                         child: DropdownButtonFormField<String>(
-                                          value: _selectedSessionId,
+                                          initialValue: _selectedSessionId,
                                           decoration: const InputDecoration(border: InputBorder.none),
                                           items: _sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.sessionName))).toList(),
                                           onChanged: (value) {
@@ -355,7 +354,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                         context,
                                         label: 'Term',
                                         child: DropdownButtonFormField<String>(
-                                          value: _selectedTermId,
+                                          initialValue: _selectedTermId,
                                           decoration: const InputDecoration(border: InputBorder.none),
                                           items: _terms.map((t) => DropdownMenuItem(value: t.id, child: Text(t.termName))).toList(),
                                           onChanged: (value) {
@@ -371,7 +370,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                         context,
                                         label: 'Class (Optional)',
                                         child: DropdownButtonFormField<String>(
-                                          value: _selectedClassId,
+                                          initialValue: _selectedClassId,
                                           decoration: const InputDecoration(border: InputBorder.none),
                                           items: [
                                             const DropdownMenuItem(value: null, child: Text('All Classes')),
@@ -428,7 +427,12 @@ class _FeeListScreenState extends State<FeeListScreen> {
                         ),
                         const SizedBox(height: 16),
                         if (_isLoading)
-                          const Padding(padding: EdgeInsets.all(40), child: LoadingIndicator(size: 50))
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: 4,
+                            itemBuilder: (context, index) => const DashboardCardSkeletonLoader(),
+                          )
                         else if (_fees.isEmpty)
                           const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No fees found for selected criteria')))
                         else

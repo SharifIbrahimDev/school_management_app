@@ -3,7 +3,7 @@ import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/attendance_service_api.dart';
-import '../../core/services/notification_service.dart' as FCMService;
+import '../../core/services/notification_service.dart' as fcm_service;
 import '../../core/services/student_service_api.dart';
 import '../../core/services/class_service_api.dart';
 import '../../core/services/section_service_api.dart';
@@ -12,6 +12,8 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/responsive_widgets.dart';
+import '../../widgets/app_snackbar.dart';
+import 'attendance_history_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -60,7 +62,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading classes: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -151,7 +153,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -179,7 +181,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       int notificationCount = 0;
       for (var s in _students) {
          if (s['status'] == 'absent') {
-            FCMService.NotificationService.sendAttendanceNotification(
+            fcm_service.NotificationService.sendAttendanceNotification(
                 parentId: s['student_id'].toString(), 
                 studentName: s['name'] ?? 'Student',
                 status: 'absent'
@@ -193,14 +195,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           _isLoading = false;
           _isDirty = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Attendance saved! $notificationCount notifications sent.'))
-        );
+        AppSnackbar.showSuccess(context, message: 'Attendance saved! $notificationCount notifications sent.');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving: $e')));
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }
@@ -211,6 +211,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       appBar: CustomAppBar(
         title: 'Daily Attendance',
         actions: [
+          // History button
+          IconButton(
+            tooltip: 'View History',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AttendanceHistoryScreen(
+                    preselectedClassId: _selectedClassId,
+                    preselectedClassName: _selectedClassId == null
+                        ? null
+                        : (_classes.firstWhere(
+                              (c) => c['id'] == _selectedClassId,
+                              orElse: () => {'class_name': 'Class'},
+                            )['class_name'] ??
+                            'Class'),
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.history_rounded, color: Colors.white),
+          ),
           IconButton(
             onPressed: (_isDirty && !_isLoading) ? _saveAttendance : null,
             icon: Icon(
@@ -322,7 +344,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _isLoading ? null : () {
                               setState(() {
-                                for (var s in _students) s['status'] = 'present';
+                                for (var s in _students) {
+                                  s['status'] = 'present';
+                                }
                                 _isDirty = true;
                               });
                             },
@@ -350,99 +374,83 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               title: 'No Students',
                               message: 'Select a class and section to mark attendance',
                             )
-                          : ResponsiveGridView(
-                              mobileColumns: 1,
-                              tabletColumns: 2,
-                              desktopColumns: 3,
+                          : ListView.builder(
                               padding: AppTheme.responsivePadding(context).copyWith(top: 0),
-                              spacing: 16,
-                              runSpacing: 16,
-                              children: _students.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final student = entry.value;
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _students.length,
+                              itemBuilder: (context, index) {
+                                final student = _students[index];
                                 final isPresent = student['status'] == 'present';
                                 final isAbsent = student['status'] == 'absent';
-                                
+
                                 return Container(
-                                  padding: const EdgeInsets.all(20),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   decoration: AppTheme.glassDecoration(
                                     context: context,
                                     opacity: 0.6,
-                                    borderRadius: 24,
+                                    borderRadius: 16,
                                     hasGlow: isPresent,
-                                    borderColor: isPresent 
-                                      ? AppTheme.neonEmerald.withValues(alpha: 0.3) 
-                                      : isAbsent 
+                                    borderColor: isPresent
+                                      ? AppTheme.neonEmerald.withValues(alpha: 0.3)
+                                      : isAbsent
                                         ? AppTheme.errorColor.withValues(alpha: 0.3)
                                         : Theme.of(context).dividerColor.withValues(alpha: 0.1),
                                   ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  child: Row(
                                     children: [
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 24,
-                                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                                            child: Text(
-                                              student['name'].isNotEmpty ? student['name'][0] : '?',
-                                              style: const TextStyle(
-                                                color: AppTheme.primaryColor, 
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 20,
-                                              ),
-                                            ),
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                        child: Text(
+                                          student['name'].isNotEmpty ? student['name'][0] : '?',
+                                          style: const TextStyle(
+                                            color: AppTheme.primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
                                           ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  student['name'], 
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  'ID: ${student['admission_number']}', 
-                                                  style: TextStyle(color: Colors.grey[500], fontSize: 13)
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 20),
-                                      // Attendance Toggles
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          Expanded(
-                                            child: _buildAttendanceButton(
-                                              icon: Icons.check_circle_rounded,
-                                              label: 'PRESENT',
-                                              isSelected: isPresent,
-                                              activeColor: AppTheme.neonEmerald,
-                                              onTap: () => _updateStatus(index, 'present'),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              student['name'],
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: _buildAttendanceButton(
-                                              icon: Icons.cancel_rounded,
-                                              label: 'ABSENT',
-                                              isSelected: isAbsent,
-                                              activeColor: AppTheme.errorColor,
-                                              onTap: () => _updateStatus(index, 'absent'),
+                                            Text(
+                                              'ID: ${student['admission_number'] ?? 'N/A'}',
+                                              style: TextStyle(color: Colors.grey[500], fontSize: 11),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // Attendance Buttons
+                                      _buildAttendanceButton(
+                                        icon: Icons.check_circle_rounded,
+                                        label: 'P',
+                                        isSelected: isPresent,
+                                        activeColor: AppTheme.neonEmerald,
+                                        onTap: () => _updateStatus(index, 'present'),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _buildAttendanceButton(
+                                        icon: Icons.cancel_rounded,
+                                        label: 'A',
+                                        isSelected: isAbsent,
+                                        activeColor: AppTheme.errorColor,
+                                        onTap: () => _updateStatus(index, 'absent'),
                                       ),
                                     ],
                                   ),
                                 );
-                              }).toList(),
+                              },
                             ),
                 ),
               ],
@@ -498,16 +506,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }) {
     return InkWell(
       onTap: _isLoading ? null : onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
           color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? activeColor.withValues(alpha: 0.5) : Colors.transparent,
-            width: 1.5,
+            width: 1.0,
           ),
         ),
         child: Column(

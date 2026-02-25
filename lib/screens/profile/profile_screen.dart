@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
 import '../../widgets/custom_button.dart';
-import '../auth/login_screen.dart';
 import 'edit_profile_screen.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/utils/app_theme.dart';
@@ -23,7 +22,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = false;
-  UserModel? _currentUser;
 
   @override
   void initState() {
@@ -34,26 +32,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUser({bool refresh = false}) async {
     final authService = Provider.of<AuthServiceApi>(context, listen: false);
     
-    // Initial load from cache/provider
-    final userMap = authService.currentUser;
-    if (userMap != null) {
-      if (mounted) {
-        setState(() {
-          _currentUser = UserModel.fromMap(userMap);
-        });
-      }
-    }
-
     if (refresh) {
       setState(() => _isLoading = true);
       try {
         await authService.refreshUser();
-        final updatedUserMap = authService.currentUser;
-        if (updatedUserMap != null && mounted) {
-          setState(() {
-            _currentUser = UserModel.fromMap(updatedUserMap);
-          });
-        }
       } catch (e) {
         debugPrint('Error refreshing user profile: $e');
       } finally {
@@ -258,7 +240,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileCard(BuildContext context, UserModel user) {
     final theme = Theme.of(context);
     final settings = Provider.of<SettingsProvider>(context);
+    final userMap = Provider.of<AuthServiceApi>(context, listen: false).currentUser;
     
+    String getNames(String key, String fallback, String nameField) {
+      if (userMap != null && userMap[key] is List) {
+        final list = userMap[key] as List;
+        if (list.isNotEmpty) {
+          final names = list.map((e) {
+            if (e is Map) return e[nameField] ?? e['name'] ?? e['id'].toString();
+            return e.toString();
+          }).where((s) => s != 'null' && s.isNotEmpty).toList();
+          if (names.isNotEmpty) return names.join(', ');
+        }
+      }
+      return fallback;
+    }
+    
+    final sectionsDisplay = getNames('assigned_sections', user.assignedSections.isEmpty ? 'None' : '${user.assignedSections.length} assigned', 'section_name');
+    final classesDisplay = getNames('assigned_classes', user.assignedClasses.isEmpty ? 'None' : '${user.assignedClasses.length} assigned', 'class_name');
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: AppTheme.glassDecoration(
@@ -303,12 +303,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
           _buildInfoRow(Icons.location_on_outlined, 'Address', user.address),
           const SizedBox(height: 12),
-          _buildInfoRow(
-            Icons.list_alt_rounded,
-            'Sections',
-            user.assignedSections.isEmpty ? 'None' : '${user.assignedSections.length} assigned',
-          ),
-          const SizedBox(height: 12),
+          if (user.role != UserRole.parent) ...[
+            _buildInfoRow(
+              Icons.list_alt_rounded,
+              'Sections',
+              sectionsDisplay,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (user.role == UserRole.teacher || user.role == UserRole.principal) ...[
+            _buildInfoRow(
+              Icons.class_outlined,
+              'Classes',
+              classesDisplay,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (user.role == UserRole.parent && user.assignedStudents.isNotEmpty) ...[
+            _buildInfoRow(
+              Icons.family_restroom_rounded,
+              'Children Linked',
+              '${user.assignedStudents.length} Students',
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildInfoRow(
             Icons.calendar_today_outlined,
             'Joined',
@@ -387,21 +405,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
   }
 
-  void _showPasswordDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: const Text('Password change functionality will be implemented with the API.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showLogoutConfirmationDialog(BuildContext context) {
     showDialog(

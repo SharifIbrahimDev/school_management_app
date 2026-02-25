@@ -5,6 +5,7 @@ import '../../core/utils/app_theme.dart';
 import '../../core/services/homework_service_api.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/app_snackbar.dart';
 
 class ParentHomeworkScreen extends StatefulWidget {
   final int classId;
@@ -48,9 +49,7 @@ class _ParentHomeworkScreenState extends State<ParentHomeworkScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading homework: $e')),
-        );
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

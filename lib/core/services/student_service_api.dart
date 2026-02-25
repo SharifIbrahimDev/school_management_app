@@ -3,6 +3,7 @@ import '../config/api_config.dart';
 import '../models/student_model.dart';
 import '../utils/storage_helper.dart';
 import 'api_service.dart';
+import 'cache_service.dart';
 
 class StudentServiceApi extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -30,7 +31,13 @@ class StudentServiceApi extends ChangeNotifier {
       if (parentId != null) queryParams['parent_id'] = parentId.toString();
       if (isActive != null) queryParams['is_active'] = isActive.toString();
       if (search != null) queryParams['search'] = search;
-      if (limit != null) queryParams['limit'] = limit.toString();
+      if (limit != null) {
+        queryParams['limit'] = limit.toString();
+      } else {
+        queryParams['limit'] = '1000'; // Default high limit to fetch all students
+      }
+      
+      final cacheKey = 'students_${sectionId}_${classId}_${parentId}_${page}';
       
       final response = await _apiService.get(
         ApiConfig.students(schoolId),
@@ -40,11 +47,25 @@ class StudentServiceApi extends ChangeNotifier {
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
         final students = data['data'] as List;
-        return students.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final studentList = students.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        
+        // Update cache
+        await CacheService.set(cacheKey, studentList);
+        
+        return studentList;
       }
+      
+      // Try cache if API fails but response isn't null (e.g. success is false)
+      final cached = CacheService.get(cacheKey);
+      if (cached != null) return List<Map<String, dynamic>>.from(cached);
       
       return [];
     } catch (e) {
+      // Return cached data on error (offline)
+      final cacheKey = 'students_${sectionId}_${classId}_${parentId}_${page}';
+      final cached = CacheService.get(cacheKey);
+      if (cached != null) return List<Map<String, dynamic>>.from(cached);
+      
       throw Exception('Error fetching students: $e');
     }
   }

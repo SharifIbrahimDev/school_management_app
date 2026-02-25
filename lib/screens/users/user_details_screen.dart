@@ -32,6 +32,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     );
 
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     try {
       final userService = Provider.of<UserServiceApi>(context, listen: false);

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/transaction_model.dart';
 import '../../core/models/user_model.dart';
@@ -66,18 +66,18 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       final schoolData = await schoolService.getSchool();
       final schoolName = schoolData['name'] ?? 'School Connect';
 
-      if (!mounted) return;
+      if (!context.mounted) return;
       await ReceiptService.generateAndPrintReceipt(
         transaction: widget.transaction,
         schoolName: schoolName,
         studentName: _studentName,
       );
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         AppSnackbar.showError(context, message: 'Error generating receipt: $e');
       }
     } finally {
-      if (mounted) setState(() => _isGeneratingReceipt = false);
+      if (context.mounted) setState(() => _isGeneratingReceipt = false);
     }
   }
 
@@ -102,7 +102,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ],
       ),
     );
-
+    if (!mounted) return;
     if (confirm == true) {
       setState(() => _isDeleting = true);
       
@@ -110,15 +110,13 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
         await transactionService.deleteTransaction(int.tryParse(widget.transaction.id) ?? 0);
         
-        if (mounted) {
-          AppSnackbar.showSuccess(context, message: 'Transaction deleted successfully');
-          Navigator.pop(context);
-        }
+        if (!mounted) return;
+        AppSnackbar.showSuccess(context, message: 'Transaction deleted successfully');
+        Navigator.pop(context);
       } catch (e) {
-        if (mounted) {
-          setState(() => _isDeleting = false);
-          AppSnackbar.showError(context, message: 'Error deleting transaction: $e');
-        }
+        if (!context.mounted) return;
+        setState(() => _isDeleting = false);
+        AppSnackbar.showError(context, message: 'Error deleting transaction: $e');
       }
     }
   }

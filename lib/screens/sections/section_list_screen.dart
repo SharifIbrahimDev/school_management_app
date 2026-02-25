@@ -78,7 +78,7 @@ class _SectionListScreenState extends State<SectionListScreen> {
       confirmColor: Colors.red,
       icon: Icons.delete_forever_rounded,
     );
-
+    if (!mounted) return;
     if (confirmed == true) {
       try {
         final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
@@ -98,7 +98,6 @@ class _SectionListScreenState extends State<SectionListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isProprietor = _currentUser?.role == UserRole.proprietor;
 
     return Scaffold(

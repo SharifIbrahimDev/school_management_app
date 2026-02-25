@@ -76,11 +76,14 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
       try {
         await Provider.of<SubjectServiceApi>(context, listen: false).deleteSubject(subject.id);
+        if (!mounted) return;
         _loadSubjects();
       } catch (e) {
-        if (mounted) AppSnackbar.friendlyError(context, error: e);
+        if (!mounted) return;
+        AppSnackbar.friendlyError(context, error: e);
       }
     }
   }

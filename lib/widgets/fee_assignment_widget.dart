@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../core/models/student_model.dart';
 import '../core/services/auth_service_api.dart';
 import '../core/services/student_service_api.dart';
-import '../core/services/transaction_service_api.dart';
+import '../core/services/fee_service_api.dart';
 import '../core/utils/app_theme.dart';
-import '../core/utils/constants.dart';
 import '../core/utils/validators.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/custom_button.dart';
@@ -32,15 +32,15 @@ class FeeAssignmentScreen extends StatefulWidget {
   });
 
   @override
-  _FeeAssignmentScreenState createState() => _FeeAssignmentScreenState();
+  State<FeeAssignmentScreen> createState() => _FeeAssignmentScreenState();
 }
 
 class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _feeNameController = TextEditingController();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String? _selectedCategory;
-  String _paymentType = 'cash';
+  DateTime _dueDate = DateTime.now().add(const Duration(days: 30));
   bool _isLoading = false;
   final List<String> _selectedStudentIds = [];
   List<StudentModel> _students = [];
@@ -74,6 +74,7 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
 
   @override
   void dispose() {
+    _feeNameController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -81,15 +82,15 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
 
   Future<void> _assignFees() async {
     if (!_formKey.currentState!.validate() || (_selectedStudentIds.isEmpty && widget.studentId == null)) {
-      AppSnackbar.showError(context, message: 'Please select at least one student');
+      AppSnackbar.showError(context, message: 'Please fix errors and select at least one student');
       return;
     }
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => ConfirmationDialog(
+      builder: (context) => const ConfirmationDialog(
         title: 'Confirm Fee Assignment',
-        content: 'Are you sure you want to assign fees to ${widget.studentId != null ? 'this student' : 'the selected students'}?',
+        content: 'Are you sure you want to assign this fee?',
       ),
     );
 
@@ -97,7 +98,7 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
 
     setState(() => _isLoading = true);
     final authService = Provider.of<AuthServiceApi>(context, listen: false);
-    final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+    final feeService = Provider.of<FeeServiceApi>(context, listen: false);
     
     final currentUser = authService.currentUser;
     if (currentUser == null) {
@@ -110,17 +111,18 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
 
     try {
       for (final studentId in studentIds) {
-        await transactionService.addTransaction(
+        await feeService.addFee(
           sectionId: int.tryParse(widget.sectionId) ?? 0,
-          sessionId: int.tryParse(widget.sessionId),
-          termId: int.tryParse(widget.termId),
+          sessionId: int.tryParse(widget.sessionId) ?? 0,
+          termId: int.tryParse(widget.termId) ?? 0,
+          classId: int.tryParse(widget.classId),
           studentId: int.tryParse(studentId),
-          amount: double.parse(_amountController.text),
-          category: _selectedCategory,
-          transactionType: 'credit',
-          paymentMethod: _paymentType,
-          description: _descriptionController.text,
-          transactionDate: DateTime.now().toIso8601String(),
+          feeName: _feeNameController.text,
+          amount: double.parse(_amountController.text).abs(), // No negative fees via this widget
+          feeScope: 'student',
+          description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+          dueDate: _dueDate.toIso8601String(),
+          isActive: true,
         );
       }
 
@@ -188,6 +190,14 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
                         ),
                       ],
                       CustomTextField(
+                        controller: _feeNameController,
+                        labelText: 'Fee Name',
+                        prefixIcon: Icons.title,
+                        isRequired: true,
+                        validator: (value) => Validators.validateRequired(value, 'Fee Name'),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
                         controller: _amountController,
                         labelText: 'Amount',
                         prefixIcon: Icons.attach_money,
@@ -196,43 +206,30 @@ class _FeeAssignmentScreenState extends State<FeeAssignmentScreen> {
                         validator: Validators.validateAmount,
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Category *',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.brightness == Brightness.light
-                              ? AppTheme.backgroundColor
-                              : const Color(0xFF1E1E1E),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.dividerColor),
                         ),
-                        initialValue: _selectedCategory,
-                        items: AppConstants.creditCategories.map((category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _selectedCategory = value),
-                        validator: (value) => Validators.validateRequired(value, 'Category'),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Payment Type *',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.brightness == Brightness.light
-                              ? AppTheme.backgroundColor
-                              : const Color(0xFF1E1E1E),
+                        leading: const Icon(Icons.calendar_today, color: AppTheme.primaryColor),
+                        title: const Text('Due Date'),
+                        subtitle: Text(
+                          DateFormat('MMM dd, yyyy').format(_dueDate),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        initialValue: _paymentType,
-                        items: ['cash', 'transfer'].map((type) {
-                          return DropdownMenuItem(
-                            value: type,
-                            child: Text(type[0].toUpperCase() + type.substring(1)),
+                        trailing: const Icon(Icons.edit, size: 20),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _dueDate,
+                            firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                            lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
                           );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _paymentType = value!),
+                          if (date != null && mounted) {
+                            setState(() => _dueDate = date);
+                          }
+                        },
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
