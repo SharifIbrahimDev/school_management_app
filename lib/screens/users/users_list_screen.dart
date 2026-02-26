@@ -7,6 +7,7 @@ import '../../core/utils/app_theme.dart';
 import 'add_user_screen.dart';
 import 'user_details_screen.dart';
 import 'student_parent_linking_screen.dart';
+import '../import/bulk_import_screen.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/loading_indicator.dart';
@@ -147,6 +148,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const StudentParentLinkingScreen()),
               );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
+            tooltip: 'Bulk Import',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BulkImportScreen()),
+              ).then((_) => _loadUsers());
             },
           ),
           IconButton(

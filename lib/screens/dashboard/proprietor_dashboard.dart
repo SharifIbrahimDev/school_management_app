@@ -25,6 +25,7 @@ import '../users/add_user_screen.dart';
 import '../sections/add_section_screen.dart';
 import '../class/add_class_screen.dart';
 import 'analytics_dashboard_screen.dart';
+import '../import/bulk_import_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_drawer.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
@@ -431,6 +432,13 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
                 }
                 Navigator.push(context, MaterialPageRoute(builder: (_) => AddClassScreen(schoolId: widget.schoolId, sectionId: _selectedSectionId!))).then((_) => _loadClasses(_selectedSectionId!));
               },
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.upload_file_rounded),
+              backgroundColor: AppTheme.neonEmerald,
+              foregroundColor: Colors.white,
+              label: 'Bulk Import',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BulkImportScreen())),
             ),
           ],
         ),

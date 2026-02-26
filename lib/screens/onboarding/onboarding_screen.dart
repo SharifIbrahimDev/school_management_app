@@ -4,6 +4,7 @@ import '../../core/utils/preferences_manager.dart';
 import '../auth/auth_wrapper.dart';
 
 class OnboardingScreen extends StatefulWidget {
+
   const OnboardingScreen({super.key});
 
   @override
@@ -11,6 +12,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
