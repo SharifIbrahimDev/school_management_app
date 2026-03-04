@@ -80,15 +80,15 @@ class _EditTermScreenState extends State<EditTermScreen> {
         await termService.deleteTerm(
           int.parse(widget.term.id),
         );
-        if (!context.mounted) return;
+        if (!mounted) return;
         Navigator.pop(context);
         AppSnackbar.showSuccess(context, message: 'Term deleted successfully!');
         widget.onSuccess();
       } catch (e) {
-        if (!context.mounted) return;
+        if (!mounted) return;
         AppSnackbar.friendlyError(context, error: e);
       } finally {
-        if (context.mounted) setState(() => _isLoading = false);
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -260,19 +260,15 @@ class _EditTermScreenState extends State<EditTermScreen> {
                                           endDate: endDate!,
                                           isActive: isActive,
                                         );
-                                        if (!context.mounted) return;
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                          AppSnackbar.showSuccess(context, message: 'Term updated successfully!');
-                                          widget.onSuccess();
-                                        }
+                                        if (!mounted) return;
+                                        Navigator.pop(context);
+                                        AppSnackbar.showSuccess(context, message: 'Term updated successfully!');
+                                        widget.onSuccess();
                                       } catch (e) {
-                                        if (!context.mounted) return;
-                                        if (context.mounted) {
-                                          AppSnackbar.friendlyError(context, error: e);
-                                        }
+                                        if (!mounted) return;
+                                        AppSnackbar.friendlyError(context, error: e);
                                       } finally {
-                                        if (context.mounted) setState(() => _isLoading = false);
+                                        if (mounted) setState(() => _isLoading = false);
                                       }
                                     }
                                   },

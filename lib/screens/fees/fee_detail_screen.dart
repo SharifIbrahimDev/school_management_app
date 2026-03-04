@@ -94,6 +94,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
   }
 
   Future<void> _deleteFee() async {
+    final feeService = Provider.of<FeeServiceApi>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -111,11 +112,10 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
         ],
       ),
     );
-    if (!context.mounted) return;
+    if (!mounted) return;
     if (confirmed == true) {
       setState(() => _isLoading = true);
       try {
-        final feeService = Provider.of<FeeServiceApi>(context, listen: false);
         await feeService.deleteFee(int.tryParse(_fee.id) ?? 0);
         
         if (!mounted) return;
@@ -187,6 +187,8 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
       return;
     }
 
+    final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+
     // Quick automatic payment dialog
     final String? method = await showDialog<String>(
       context: context,
@@ -231,7 +233,6 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
       await transactionService.addTransaction(
         sectionId: _fee.sectionId is int ? _fee.sectionId as int : int.tryParse(_fee.sectionId.toString()) ?? 0,
         termId: int.tryParse(_fee.termId.toString()),
@@ -277,6 +278,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                     if (schoolId == null) return;
                     
                     if (!context.mounted) return;
+                    final feeService = Provider.of<FeeServiceApi>(context, listen: false);
                     final updated = await Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -291,7 +293,6 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
                       if (updated == true) {
                         if (!mounted) return;
                         // Refresh fee data
-                        final feeService = Provider.of<FeeServiceApi>(context, listen: false);
                         final feeData = await feeService.getFee(int.parse(_fee.id));
                         if (feeData != null && mounted) {
                           setState(() {

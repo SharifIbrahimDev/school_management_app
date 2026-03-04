@@ -17,8 +17,40 @@ class FeeController extends Controller
     {
         $fees = Fee::where('school_id', $schoolId)
             ->with(['section', 'academicSession', 'term', 'classModel'])
-            ->when($request->has('section_id'), function ($query) use ($request) {
-                $query->where('section_id', $request->section_id);
+            ->when($request->has('student_id'), function ($query) use ($request) {
+                // When we request fees for a specific student, we want all applicable fees:
+                // School-wide, Section-wide, Class-wide (for their class), and Student-specific.
+                $student = \App\Models\Student::with('sections')->find($request->student_id);
+                if ($student) {
+                    $sectionIds = $student->sections->pluck('id')->toArray();
+                    $query->where(function ($q) use ($student, $sectionIds) {
+                        // Section-wide fees (class_id and student_id are null)
+                        $q->where(function ($subQ) use ($sectionIds) {
+                            $subQ->whereIn('section_id', $sectionIds)
+                                 ->whereNull('class_id')
+                                 ->whereNull('student_id');
+                        })
+                        // Class-specific fees
+                        ->orWhere(function ($subQ) use ($student) {
+                            $subQ->where('class_id', $student->class_id)
+                                 ->whereNull('student_id');
+                        })
+                        // Student-specific fees (inclusive of discounts/scholarships)
+                        ->orWhere('student_id', $student->id)
+                        // School-wide fees
+                        ->orWhere('fee_scope', 'school');
+                    });
+                } else {
+                    $query->where('student_id', $request->student_id);
+                }
+            }, function ($query) use ($request) {
+                // If NO student_id is passed, do the regular exact match (used in Fee List Screen)
+                $query->when($request->has('class_id'), function ($q) use ($request) {
+                    $q->where('class_id', $request->class_id);
+                })
+                ->when($request->has('section_id'), function ($q) use ($request) {
+                    $q->where('section_id', $request->section_id);
+                });
             })
             ->when($request->has('session_id'), function ($query) use ($request) {
                 $query->where('session_id', $request->session_id);
@@ -26,19 +58,14 @@ class FeeController extends Controller
             ->when($request->has('term_id'), function ($query) use ($request) {
                 $query->where('term_id', $request->term_id);
             })
-            ->when($request->has('class_id'), function ($query) use ($request) {
-                $query->where('class_id', $request->class_id);
-            })
-            ->when($request->has('student_id'), function ($query) use ($request) {
-                $query->where('student_id', $request->student_id);
-            })
             ->when($request->has('fee_scope'), function ($query) use ($request) {
                 $query->where('fee_scope', $request->fee_scope);
             })
             ->when($request->has('is_active'), function ($query) use ($request) {
                 $query->where('is_active', $request->boolean('is_active'));
             })
-            ->paginate(20);
+            ->orderBy('created_at', 'desc')
+            ->paginate(100);
 
         return response()->json([
             'success' => true,

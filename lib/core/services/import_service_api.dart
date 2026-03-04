@@ -54,24 +54,45 @@ class ImportServiceApi extends ChangeNotifier {
     Uint8List? fileBytes,
     String? fileName,
   }) async {
+    return await bulkImport(
+      endpoint: ApiConfig.importStudentsBulk,
+      file: file,
+      fileBytes: fileBytes,
+      fileName: fileName ?? 'students.csv',
+      schoolId: schoolId,
+    );
+  }
+
+  /// Generic Bulk Import
+  Future<Map<String, dynamic>> bulkImport({
+    required String endpoint,
+    required File file,
+    Uint8List? fileBytes,
+    String? fileName,
+    Map<String, String>? fields,
+    int? schoolId,
+  }) async {
     try {
-      final effectiveSchoolId = schoolId ?? await StorageHelper.getSchoolId();
-      final fields = <String, String>{};
-      if (effectiveSchoolId != null) {
-        fields['school_id'] = effectiveSchoolId.toString();
+      final effectiveFields = fields ?? <String, String>{};
+      
+      if (!effectiveFields.containsKey('school_id')) {
+        final sid = schoolId ?? await StorageHelper.getSchoolId();
+        if (sid != null) {
+          effectiveFields['school_id'] = sid.toString();
+        }
       }
 
-      final List<http.MultipartFile> files = [];
+      final List<http.MultipartFile> multipartFiles = [];
 
       if (fileBytes != null) {
-        files.add(http.MultipartFile.fromBytes(
+        multipartFiles.add(http.MultipartFile.fromBytes(
           'file',
           fileBytes,
-          filename: fileName ?? 'students.csv',
+          filename: fileName ?? 'import.csv',
           contentType: MediaType('text', 'csv'),
         ));
       } else if (file.path.isNotEmpty) {
-        files.add(await http.MultipartFile.fromPath(
+        multipartFiles.add(await http.MultipartFile.fromPath(
           'file',
           file.path,
           contentType: MediaType('text', 'csv'),
@@ -81,12 +102,12 @@ class ImportServiceApi extends ChangeNotifier {
       }
 
       return await _apiService.multipart(
-        ApiConfig.importStudentsBulk,
-        fields: fields,
-        files: files,
+        endpoint,
+        fields: effectiveFields,
+        files: multipartFiles,
       );
     } catch (e) {
-      throw Exception('Error importing students: $e');
+      throw Exception('Import error: $e');
     }
   }
 }

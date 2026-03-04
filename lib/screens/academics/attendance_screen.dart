@@ -270,15 +270,44 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Padding(
                   padding: AppTheme.responsivePadding(context),
                   child: Container(
-                    padding: const EdgeInsets.all(20.0),
+                    padding: const EdgeInsets.all(24.0),
                     decoration: AppTheme.glassDecoration(
                       context: context,
-                      opacity: 0.6,
-                      borderRadius: 24,
+                      opacity: 0.8,
+                      borderRadius: 32,
+                      hasGlow: true,
                       borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                     ),
                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Text(
+                              "SESSION FILTERS",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textSecondaryColor,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_students.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  "${_students.length} Students",
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                         ResponsiveRowColumn(
                           rowOnMobile: false,
                           rowOnTablet: true,
@@ -291,7 +320,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   context,
                                   label: _selectedClassId == null 
                                     ? 'Select Class' 
-                                    : _classes.firstWhere((c) => c['id'] == _selectedClassId, orElse: () => {'name': 'Class'})['class_name'] ?? 'Class',
+                                    : _classes.firstWhere((c) => c['id'] == _selectedClassId, orElse: () => {'class_name': 'Class'})['class_name'] ?? 'Class',
                                   icon: Icons.school_rounded,
                                   onTap: () => _showFilterDialog('class'),
                                 ),
@@ -301,7 +330,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 context,
                                 label: _selectedClassId == null 
                                   ? 'Select Class' 
-                                  : _classes.firstWhere((c) => c['id'] == _selectedClassId, orElse: () => {'name': 'Class'})['class_name'] ?? 'Class',
+                                  : _classes.firstWhere((c) => c['id'] == _selectedClassId, orElse: () => {'class_name': 'Class'})['class_name'] ?? 'Class',
                                 icon: Icons.school_rounded,
                                 onTap: () => _showFilterDialog('class'),
                               ),
@@ -332,17 +361,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             context,
                             label: _selectedSectionId == null 
                               ? 'Select Section' 
-                              : _sections.firstWhere((s) => s['id'] == _selectedSectionId, orElse: () => {'name': 'Section'})['section_name'] ?? 'Section',
+                              : _sections.firstWhere((s) => s['id'] == _selectedSectionId, orElse: () => {'section_name': 'Section'})['section_name'] ?? 'Section',
                             icon: Icons.grid_view_rounded,
                             onTap: () => _showFilterDialog('section'),
                           ),
                         ],
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
-                          height: 54,
+                          height: 56,
                           child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : () {
+                            onPressed: _isLoading || _students.isEmpty ? null : () {
                               setState(() {
                                 for (var s in _students) {
                                   s['status'] = 'present';
@@ -353,8 +382,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             icon: const Icon(Icons.done_all_rounded, color: Colors.white),
                             label: const Text('Mark All Present', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColorDark,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              backgroundColor: AppTheme.primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               elevation: 0,
                             ),
                           ),

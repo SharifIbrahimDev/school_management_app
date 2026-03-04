@@ -133,30 +133,16 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const CustomAppBar(
-        title: 'Advanced Analytics',
+        title: 'Executive Intelligence',
+        backgroundColor: Colors.transparent,
         actions: [
           NotificationBadge(),
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ),
-        ),
+        decoration: AppTheme.mainGradientDecoration(context),
         child: SafeArea(
           child: _isLoading
               ? _buildLoadingState()

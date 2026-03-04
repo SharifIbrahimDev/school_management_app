@@ -318,11 +318,32 @@ class StudentServiceApi extends ChangeNotifier {
     required String? parentId,
   }) async {
     try {
-      final response = await updateStudent(
-        int.parse(studentId),
-        parentId: parentId != null ? int.parse(parentId) : null,
-      );
-      return response['message'] ?? 'Parent assigned successfully';
+      final parsedStudentId = int.parse(studentId);
+
+      if (parentId == null) {
+        // Unassigning: must explicitly send parent_id: null to the backend.
+        // Cannot use updateStudent() here because it skips null values.
+        final serverSchoolId = await StorageHelper.getSchoolId();
+        if (serverSchoolId == null) throw Exception('School ID not found');
+
+        final response = await _apiService.put(
+          ApiConfig.student(serverSchoolId, parsedStudentId),
+          body: {'parent_id': null},
+        );
+
+        if (response['success'] == true) {
+          return response['message'] ?? 'Parent unassigned successfully';
+        } else {
+          throw Exception(response['message'] ?? 'Failed to unassign parent');
+        }
+      } else {
+        // Assigning a new parent
+        final response = await updateStudent(
+          parsedStudentId,
+          parentId: int.parse(parentId),
+        );
+        return response['message'] ?? 'Parent assigned successfully';
+      }
     } catch (e) {
       throw Exception('Error assigning parent: $e');
     }

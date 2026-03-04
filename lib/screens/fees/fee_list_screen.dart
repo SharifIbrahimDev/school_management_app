@@ -19,7 +19,6 @@ import 'fee_detail_screen.dart';
 import 'add_fee_screen.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_app_bar.dart';
-import '../../widgets/loading_indicator.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../widgets/responsive_widgets.dart';
@@ -505,11 +504,11 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                                 _editingFeeId = fee.id;
                                                 _editAmountController.text = fee.amount.toString();
                                               });
-                                            } else {
+                                          } else {
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(builder: (context) => FeeDetailScreen(fee: fee)),
-                                              );
+                                              ).then((_) => _loadFees());
                                             }
                                           },
                                           child: Text(
@@ -529,7 +528,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (context) => FeeDetailScreen(fee: fee)),
-                                    );
+                                    ).then((_) => _loadFees());
                                   },
                                 ),
                               );

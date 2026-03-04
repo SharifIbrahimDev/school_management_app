@@ -81,25 +81,51 @@ class SectionController extends Controller
     public function update(Request $request, string $schoolId, string $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'section_name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'is_active' => 'sometimes|boolean',
+            'section_name'          => 'sometimes|required|string|max:255',
+            'description'           => 'nullable|string',
+            'is_active'             => 'sometimes|boolean',
+            'assigned_principal_ids' => 'sometimes|array',
+            'assigned_principal_ids.*' => 'exists:users,id',
+            'assigned_bursar_ids'   => 'sometimes|array',
+            'assigned_bursar_ids.*' => 'exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
         $section = Section::where('school_id', $schoolId)->findOrFail($id);
-        $section->update($request->all());
+
+        // Update basic fields (excluding role-assignment arrays)
+        $section->update($request->only(['section_name', 'description', 'is_active']));
+
+        // Sync principals: keep existing non-principal users, replace principal users
+        if ($request->has('assigned_principal_ids')) {
+            $existingNonPrincipalIds = $section->users()
+                ->where('role', '!=', 'principal')
+                ->pluck('users.id')
+                ->toArray();
+            $newIds = array_merge($existingNonPrincipalIds, $request->assigned_principal_ids);
+            $section->users()->sync($newIds);
+        }
+
+        // Sync bursars: keep existing non-bursar users, replace bursar users
+        if ($request->has('assigned_bursar_ids')) {
+            $existingNonBursarIds = $section->users()
+                ->where('role', '!=', 'bursar')
+                ->pluck('users.id')
+                ->toArray();
+            $newIds = array_merge($existingNonBursarIds, $request->assigned_bursar_ids);
+            $section->users()->sync($newIds);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Section updated successfully',
-            'data' => $section,
+            'data'    => $section->load('users'),
         ]);
     }
 
@@ -118,29 +144,46 @@ class SectionController extends Controller
     }
 
     /**
-     * Assign users to a section
+     * Assign users to a section (optionally filtered by role).
+     *
+     * If 'role' is provided (e.g. 'principal' or 'bursar'), only users of
+     * that role are replaced; users of other roles remain untouched.
+     * If no 'role' is provided, all section users are replaced (original behaviour).
      */
     public function assignUsers(Request $request, string $schoolId, string $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_ids' => 'required|array',
+            'user_ids'   => 'required|array',
             'user_ids.*' => 'exists:users,id',
+            'role'       => 'sometimes|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
         $section = Section::where('school_id', $schoolId)->findOrFail($id);
-        $section->users()->sync($request->user_ids);
+
+        if ($request->has('role') && $request->role) {
+            // Remove users of the given role, then attach the new ones
+            $existingOtherIds = $section->users()
+                ->where('role', '!=', $request->role)
+                ->pluck('users.id')
+                ->toArray();
+            $newIds = array_merge($existingOtherIds, $request->user_ids);
+            $section->users()->sync($newIds);
+        } else {
+            // Replace all section users (original behaviour)
+            $section->users()->sync($request->user_ids);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Users assigned to section successfully',
-            'data' => $section->load('users'),
+            'data'    => $section->load('users'),
         ]);
     }
 

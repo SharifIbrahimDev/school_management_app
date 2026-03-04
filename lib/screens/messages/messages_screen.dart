@@ -9,6 +9,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_display_widget.dart';
 import 'compose_message_screen.dart';
 import 'message_detail_screen.dart';
+import '../../widgets/loading_indicator.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -73,40 +74,38 @@ class _MessagesScreenState extends State<MessagesScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Messages',
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Inbox'),
-            Tab(text: 'Sent'),
-          ],
+        title: 'Communications',
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: AppTheme.primaryColor,
+              unselectedLabelColor: Colors.white,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: Colors.white,
+              ),
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inbox_rounded, size: 18), SizedBox(width: 8), Text('Inbox')])),
+                Tab(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.send_rounded, size: 18), SizedBox(width: 8), Text('Sent')])),
+              ],
+            ),
+          ),
         ),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ),
-        ),
+        decoration: AppTheme.mainGradientDecoration(context),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: LoadingIndicator(message: 'Syncing messages...'))
               : _error != null
                   ? ErrorDisplayWidget(
                       error: _error!,
@@ -121,7 +120,7 @@ class _MessagesScreenState extends State<MessagesScreen> with SingleTickerProvid
                     ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await Navigator.push(
             context,
@@ -133,7 +132,9 @@ class _MessagesScreenState extends State<MessagesScreen> with SingleTickerProvid
         },
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.edit),
+        icon: const Icon(Icons.add_comment_rounded),
+        label: const Text("Compose", style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 8,
       ),
     );
   }

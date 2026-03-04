@@ -58,6 +58,35 @@ class SectionModel {
         return DateTime.now();
       }
 
+      // Parse the 'users' array returned by the API and group IDs by role
+      List<String> principalIds = [];
+      List<String> bursarIds = [];
+      List<String> teacherIds = [];
+      List<String> parentIds = [];
+
+      final rawUsers = map['users'] as List? ?? [];
+      for (final u in rawUsers) {
+        if (u is Map) {
+          final userId = (u['id'] ?? '').toString();
+          final role = (u['role'] ?? '').toString();
+          if (userId.isEmpty) continue;
+          switch (role) {
+            case 'principal':
+              principalIds.add(userId);
+              break;
+            case 'bursar':
+              bursarIds.add(userId);
+              break;
+            case 'teacher':
+              teacherIds.add(userId);
+              break;
+            case 'parent':
+              parentIds.add(userId);
+              break;
+          }
+        }
+      }
+
       return SectionModel(
         id: (map['id'] ?? '').toString(),
         schoolId: (map['school_id'] ?? map['schoolId'] ?? '').toString(),
@@ -65,14 +94,14 @@ class SectionModel {
         aboutSection: map['about_section'] ?? map['aboutSection'],
         academicSessionIds: [],
         classIds: [],
-        assignedPrincipalIds: [],
-        assignedBursarIds: [],
-        assignedTeacherIds: [],
-        parentIds: [],
+        assignedPrincipalIds: principalIds,
+        assignedBursarIds: bursarIds,
+        assignedTeacherIds: teacherIds,
+        parentIds: parentIds,
         createdAt: parseDate(map['created_at'] ?? map['createdAt']),
         lastModified: parseDate(map['updated_at'] ?? map['lastModified']),
       );
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('Error parsing SectionModel: $e');
       debugPrint('Map: $map');
       return SectionModel(

@@ -304,31 +304,17 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
     }
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Dashboard Overview',
+      extendBodyBehindAppBar: true,
+      appBar: const CustomAppBar(
+        title: 'Proprietor Command',
+        backgroundColor: Colors.transparent,
         actions: [
-          const NotificationBadge(),
+          NotificationBadge(),
         ],
       ),
       drawer: const CustomDrawer(),
       body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ),
-        ),
+        decoration: AppTheme.mainGradientDecoration(context),
         child: SafeArea(
           child: DashboardContent(
             sections: _sections,

@@ -127,6 +127,8 @@ class PaymentController extends Controller
                     // Check if we have a local record
                     $payment = Payment::where('reference', $reference)->first();
 
+                    $isNewSuccess = false;
+
                     if ($payment) {
                         // Update existing
                         if ($payment->status !== 'success') {
@@ -135,11 +137,10 @@ class PaymentController extends Controller
                                 'gateway_response' => $paystackData,
                                 'paid_at' => now(),
                             ]);
+                            $isNewSuccess = true;
                         }
                     } else {
                         // Create new (Client-side init flow)
-                        // Need student_id and fee_id likely passed from frontend or metadata
-
                         $meta = $paystackData['metadata'] ?? [];
 
                         // Fallback: require student_id/fee_id in request if not in metadata
@@ -160,10 +161,30 @@ class PaymentController extends Controller
                             'gateway_response' => $paystackData,
                             'paid_at' => now(),
                         ]);
+                        $isNewSuccess = true;
                     }
 
-                    // Transaction verified and recorded
-                    // Fee balance logic is handled by calculating existing transactions
+                    // Record Transaction so school balances and student balances update correctly
+                    if ($isNewSuccess) {
+                        $fee = \App\Models\Fee::find($payment->fee_id);
+                        if ($fee) {
+                            \App\Models\Transaction::create([
+                                'school_id' => $fee->school_id,
+                                'section_id' => $fee->section_id,
+                                'session_id' => $fee->session_id,
+                                'term_id' => $fee->term_id,
+                                'student_id' => $payment->student_id,
+                                'transaction_type' => 'income',
+                                'amount' => $payment->amount,
+                                'payment_method' => in_array($payment->payment_method, ['card', 'paystack']) ? 'bank_transfer' : 'mobile_money',
+                                'category' => 'Tuition Fee',
+                                'description' => "Online payment for {$fee->fee_name}",
+                                'reference_number' => $payment->reference,
+                                'transaction_date' => now(),
+                                'recorded_by' => null, // Online payment has no specific bursar
+                            ]);
+                        }
+                    }
                     
                     return response()->json([
                         'message' => 'Payment verified successfully',

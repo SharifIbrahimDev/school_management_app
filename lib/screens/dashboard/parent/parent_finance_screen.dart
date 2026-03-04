@@ -30,7 +30,7 @@ class _ParentFinanceScreenState extends State<ParentFinanceScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<StudentModel> _students = [];
-  Map<String, double> _studentBalances = {};
+  final Map<String, double> _studentBalances = {};
   double _totalGlobalOutstanding = 0.0;
 
   @override

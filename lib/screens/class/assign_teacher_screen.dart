@@ -140,10 +140,16 @@ class _AssignTeacherScreenState extends State<AssignTeacherScreen> {
                               ),
                             ),
                             subtitle: Text(teacher.email),
-                            trailing: isAssigned
-                                ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor)
-                                : const Icon(Icons.add_circle_outline_rounded, color: Colors.grey),
-                            onTap: () => _handleAssignment(teacher),
+                            trailing: ElevatedButton(
+                              onPressed: () => _handleAssignment(teacher),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isAssigned ? Theme.of(context).colorScheme.error : AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                              child: Text(isAssigned ? 'Unassign' : 'Assign'),
+                            ),
                           ),
                         );
                       },

@@ -60,7 +60,6 @@ class _ParentReportCardScreenState extends State<ParentReportCardScreen> {
       return;
     }
 
-    final authService = Provider.of<AuthServiceApi>(context, listen: false);
     final schoolName = "School Name";
     final student = _reportData['student'] ?? {};
     final className = student['class_model']?['class_name'] ?? "N/A";

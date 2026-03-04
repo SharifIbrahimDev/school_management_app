@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/class_model.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service_api.dart';
+import '../../core/services/class_service_api.dart';
 import '../../core/services/user_service_api.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/detail_item.dart';
@@ -30,11 +31,26 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   UserModel? _currentUser;
   String _teacherName = 'Loading...';
   int? _actualStudentCount;
+  late ClassModel _classModel;
 
   @override
   void initState() {
     super.initState();
+    _classModel = widget.classModel;
     _loadData();
+  }
+
+  /// Re-fetches the class record from the API and updates local state.
+  Future<void> _refreshClass() async {
+    try {
+      final classService = Provider.of<ClassServiceApi>(context, listen: false);
+      final fresh = await classService.getClass(int.parse(_classModel.id));
+      if (fresh != null && mounted) {
+        setState(() => _classModel = ClassModel.fromMap(fresh));
+      }
+    } catch (e) {
+      debugPrint('Error refreshing class: $e');
+    }
   }
 
   Future<void> _loadData() async {
@@ -58,9 +74,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       // ignore silently if it fails
     }
 
-    if (widget.classModel.assignedTeacherUserId != null && widget.classModel.assignedTeacherUserId!.isNotEmpty) {
+    if (_classModel.assignedTeacherUserId != null && _classModel.assignedTeacherUserId!.isNotEmpty) {
       try {
-        final teacherIdInt = int.tryParse(widget.classModel.assignedTeacherUserId!) ?? 0;
+        final teacherIdInt = int.tryParse(_classModel.assignedTeacherUserId!) ?? 0;
         if (teacherIdInt != 0) {
           final teacherData = await userService.getUser(teacherIdInt);
           if (mounted && teacherData != null) {
@@ -88,7 +104,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: widget.classModel.name,
+        title: _classModel.name,
         actions: [
           if (isPrincipal)
             IconButton(
@@ -99,9 +115,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => EditClassScreen(
-                      classModel: widget.classModel,
+                      classModel: _classModel,
                       schoolId: _currentUser?.schoolId ?? '',
-                      sectionId: widget.classModel.sectionId,
+                      sectionId: _classModel.sectionId,
                     ),
                   ),
                 ).then((_) => _loadData());
@@ -196,11 +212,11 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             icon: Icon(
-                              widget.classModel.assignedTeacherUserId != null && widget.classModel.assignedTeacherUserId!.isNotEmpty ? Icons.person_remove : Icons.person_add,
+                              _classModel.assignedTeacherUserId != null && _classModel.assignedTeacherUserId!.isNotEmpty ? Icons.person_remove : Icons.person_add,
                               color: Colors.white,
                             ),
                             label: Text(
-                              widget.classModel.assignedTeacherUserId != null && widget.classModel.assignedTeacherUserId!.isNotEmpty ? 'Change/Remove Teacher' : 'Assign Teacher',
+                              _classModel.assignedTeacherUserId != null && _classModel.assignedTeacherUserId!.isNotEmpty ? 'Change/Remove Teacher' : 'Assign Teacher',
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.colorScheme.primary,
@@ -208,15 +224,19 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            onPressed: () {
-                              Navigator.push(
+                            onPressed: () async {
+                              final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AssignTeacherScreen(
-                                    classModel: widget.classModel,
+                                    classModel: _classModel,
                                   ),
                                 ),
-                              ).then((_) => _loadData());
+                              );
+                              if (result == true && mounted) {
+                                await _refreshClass(); // Update _classModel with fresh teacher ID
+                                _loadData();           // Refresh teacher name label
+                              }
                             },
                           ),
                         ),

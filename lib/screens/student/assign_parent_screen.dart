@@ -236,18 +236,16 @@ class _AssignParentScreenState extends State<AssignParentScreen> {
                                 ),
                                 title: Text(parent.fullName, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 subtitle: Text(parent.email),
-                                trailing: isAssigned
-                                  ? const Icon(Icons.check_circle, color: AppTheme.primaryColor)
-                                  : ElevatedButton(
-                                      onPressed: () => _assignParent(parent.id, false),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryColor,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      ),
-                                      child: const Text('Assign'),
-                                    ),
+                                trailing: ElevatedButton(
+                                  onPressed: () => _assignParent(isAssigned ? null : parent.id, isAssigned),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isAssigned ? theme.colorScheme.error : AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  ),
+                                  child: Text(isAssigned ? 'Unassign' : 'Assign'),
+                                ),
                               ),
                             );
                           },

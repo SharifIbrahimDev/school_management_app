@@ -73,11 +73,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         studentName: _studentName,
       );
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         AppSnackbar.showError(context, message: 'Error generating receipt: $e');
       }
     } finally {
-      if (context.mounted) setState(() => _isGeneratingReceipt = false);
+      if (mounted) setState(() => _isGeneratingReceipt = false);
     }
   }
 
@@ -114,7 +114,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         AppSnackbar.showSuccess(context, message: 'Transaction deleted successfully');
         Navigator.pop(context);
       } catch (e) {
-        if (!context.mounted) return;
+        if (!mounted) return;
         setState(() => _isDeleting = false);
         AppSnackbar.showError(context, message: 'Error deleting transaction: $e');
       }

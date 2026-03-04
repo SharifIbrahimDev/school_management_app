@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -9,6 +10,8 @@ import '../../widgets/custom_app_bar.dart';
 import '../../core/utils/app_theme.dart';
 import '../../widgets/success_sheet.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/loading_indicator.dart';
+import '../../core/config/api_config.dart';
 
 class BulkImportScreen extends StatefulWidget {
   const BulkImportScreen({super.key});
@@ -24,6 +27,22 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
   List<List<dynamic>> _previewData = [];
   List<List<dynamic>> _fullData = [];
   String? _uploadStatus;
+  
+  // Mapping logic
+  Map<String, int> _fieldMapping = {};
+  bool _showMapping = false;
+
+  final Map<String, List<String>> _importTypeConfigs = {
+    'students': ['first_name', 'last_name', 'parent_email', 'admission_number', 'dob', 'gender'],
+    'parents': ['name', 'email', 'phone', 'address'],
+    'teachers': ['name', 'email', 'phone', 'department'],
+    'sections': ['section_name', 'description'],
+    'classes': ['class_name', 'section_id', 'capacity'],
+    'fees': ['fee_name', 'amount', 'fee_scope', 'section_id', 'class_id', 'session_id', 'term_id'],
+    'map_parents': ['parent_email', 'student_admission_number'],
+    'assign_teachers': ['teacher_email', 'class_id'],
+    'ultimate_students': ['section_name', 'class_name', 'teacher_email', 'student_first_name', 'student_last_name', 'parent_email', 'admission_number'],
+  };
 
   Future<void> _pickFile() async {
     try {
@@ -39,6 +58,8 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
           _previewData = [];
           _fullData = [];
           _uploadStatus = null;
+          _showMapping = false;
+          _fieldMapping = {};
         });
         _parseAndProcessData();
       }
@@ -56,7 +77,7 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       String csvString;
       if (kIsWeb) {
         final bytes = _pickedFile!.bytes!;
-        csvString = String.fromCharCodes(bytes);
+        csvString = utf8.decode(bytes);
       } else {
         final file = File(_pickedFile!.path!);
         csvString = await file.readAsString();
@@ -64,82 +85,122 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
 
       List<List<dynamic>> csvTable = const CsvToListConverter().convert(csvString);
       
-      if (_selectedType == 'students' && csvTable.isNotEmpty) {
-        final header = csvTable[0].map((e) => e.toString().trim().toLowerCase()).toList();
-        int admIndex = header.indexOf('admission_number');
-        if (admIndex == -1) admIndex = header.indexOf('admission number');
-        
-        if (admIndex == -1) {
-          csvTable[0].add('admission_number');
-          admIndex = csvTable[0].length - 1;
-        }
+      if (csvTable.isEmpty) return;
 
-        final currentYear = DateTime.now().year;
-        
-        for (int i = 1; i < csvTable.length; i++) {
-          while (csvTable[i].length < csvTable[0].length) {
-            csvTable[i].add('');
-          }
-          
-          final val = csvTable[i][admIndex].toString().trim();
-          if (val.isEmpty) {
-            final generated = 'SCH-$currentYear-${(1000 + i).toString()}';
-            csvTable[i][admIndex] = generated;
-          }
+      // Detect headers and build initial mapping
+      final headers = csvTable[0].map((e) => e.toString().trim().toLowerCase()).toList();
+      final requiredFields = _importTypeConfigs[_selectedType]!;
+      
+      for (var field in requiredFields) {
+        int index = headers.indexOf(field.replaceAll('_', ' '));
+        if (index == -1) index = headers.indexOf(field);
+        if (index != -1) {
+          _fieldMapping[field] = index;
         }
       }
 
       setState(() {
         _fullData = csvTable;
-        _previewData = csvTable.take(10).toList(); // Show more rows in preview
+        _previewData = csvTable.take(15).toList();
+        _showMapping = true;
       });
     } catch (e) {
       debugPrint('Error parsing CSV: $e');
+      if (mounted) AppSnackbar.showError(context, message: 'Invalid CSV format or encoding.');
     }
   }
 
-  Future<void> _uploadFile() async {
+  Future<void> _initiateImport() async {
     if (_fullData.isEmpty) return;
     
     setState(() => _isLoading = true);
 
     try {
       final service = Provider.of<ImportServiceApi>(context, listen: false);
-      Map<String, dynamic> result;
-
-      final String csvData = const ListToCsvConverter().convert(_fullData);
-      final List<int> csvBytes = csvData.codeUnits;
-      final Uint8List fileBytes = Uint8List.fromList(csvBytes);
-
-      if (_selectedType == 'students') {
-        result = await service.importStudents(
-          file: File(''),
-          fileBytes: fileBytes,
-          fileName: 'processed_students.csv',
-        );
-      } else {
-        result = await service.importUsers(
-          file: File(''),
-          fileBytes: fileBytes,
-          fileName: 'processed_users.csv',
-          role: _selectedType == 'teachers' ? 'teacher' : 'parent',
-        );
+      
+      // 1. Prepare Data based on mapping
+      List<List<dynamic>> processedData = [];
+      final requiredFields = _importTypeConfigs[_selectedType]!;
+      
+      // Add Headers
+      processedData.add(requiredFields);
+      
+      // Add Content rows
+      for (int i = 1; i < _fullData.length; i++) {
+        final row = _fullData[i];
+        final List<dynamic> newRow = [];
+        for (var field in requiredFields) {
+          final index = _fieldMapping[field];
+          if (index != null && index < row.length) {
+            newRow.add(row[index]);
+          } else {
+            // Special handling for student admission if missing
+            if (_selectedType == 'students' && field == 'admission_number') {
+               newRow.add('SCH-${DateTime.now().year}-${1000 + i}');
+            } else {
+               newRow.add('');
+            }
+          }
+        }
+        processedData.add(newRow);
       }
+
+      final String csvData = const ListToCsvConverter().convert(processedData);
+      final Uint8List fileBytes = Uint8List.fromList(utf8.encode(csvData));
+
+      String endpoint = ApiConfig.importStudentsBulk;
+      Map<String, String> fields = {};
+
+      switch (_selectedType) {
+        case 'students':
+          endpoint = ApiConfig.importStudentsBulk;
+          break;
+        case 'parents':
+          endpoint = ApiConfig.importUsers;
+          fields['role'] = 'parent';
+          break;
+        case 'teachers':
+          endpoint = ApiConfig.importUsers;
+          fields['role'] = 'teacher';
+          break;
+        case 'sections':
+          endpoint = ApiConfig.importSections;
+          break;
+        case 'classes':
+          endpoint = ApiConfig.importClasses;
+          break;
+        case 'fees':
+          endpoint = ApiConfig.importFees;
+          break;
+        case 'map_parents':
+          endpoint = ApiConfig.importMapParents;
+          break;
+        case 'assign_teachers':
+          endpoint = ApiConfig.importAssignTeachers;
+          break;
+        case 'ultimate_students':
+          endpoint = ApiConfig.importUltimateStudents;
+          break;
+      }
+
+      final result = await service.bulkImport(
+        endpoint: endpoint,
+        file: File(''),
+        fileBytes: fileBytes,
+        fileName: 'import_${_selectedType}.csv',
+        fields: fields,
+      );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _uploadStatus = 'Success! Imported ${result['imported_count']} records.';
-          if (result['errors'] != null && (result['errors'] as List).isNotEmpty) {
-             _uploadStatus = '$_uploadStatus\nErrors: ${(result['errors'] as List).length}';
-          }
+          _uploadStatus = 'Success! Processed ${result['imported_count']} records.';
         });
         
         SuccessSheet.show(
           context,
           title: 'Import Successful',
-          message: 'Successfully imported ${result['imported_count']} $_selectedType. '
-                   '${(result['errors'] as List?)?.isNotEmpty == true ? "\nNote: ${(result['errors'] as List).length} record(s) had errors." : ""}',
+          message: 'Successfully processed ${result['imported_count']} records into the system.',
           onButtonPressed: () => Navigator.pop(context),
         );
       }
@@ -147,8 +208,9 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _uploadStatus = 'Failed: ${e.toString().replaceAll('Exception:', '')}';
+          _uploadStatus = 'Import Failed: ${e.toString().replaceAll('Exception:', '')}';
         });
+        AppSnackbar.showError(context, message: _uploadStatus!);
       }
     }
   }
@@ -156,32 +218,32 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'Data Migration Suite'),
+      appBar: const CustomAppBar(title: 'High-Volume Data Import'),
       body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-        ),
+        decoration: AppTheme.mainGradientDecoration(context),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: AppTheme.responsivePadding(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildProjectHeader(),
+              const SizedBox(height: 24),
               _buildTypeSelector(),
               const SizedBox(height: 24),
-              _buildGuidelineCard(),
+              _buildFormatDiscovery(),
               const SizedBox(height: 32),
-              _buildFilePicker(),
+              _buildFileDropZone(),
+              if (_showMapping) ...[
+                const SizedBox(height: 40),
+                _buildFieldMappingSection(),
+              ],
               if (_previewData.isNotEmpty) ...[
                 const SizedBox(height: 40),
                 _buildPreviewSection(),
               ],
               const SizedBox(height: 48),
-              if (_uploadStatus != null) _buildStatusMessage(),
-              _buildActionButtons(),
+              if (_uploadStatus != null) _buildStatusCard(),
+              _buildActionSuite(),
               const SizedBox(height: 80),
             ],
           ),
@@ -190,165 +252,217 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
     );
   }
 
+  Widget _buildProjectHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.neonEmerald.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text("AUTOMATED", style: TextStyle(color: AppTheme.neonEmerald, fontSize: 10, fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(width: 8),
+            const Text("ENTERPRISE MIGRATION TOOL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: AppTheme.textSecondaryColor)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          "Import Core Databases",
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppTheme.primaryColor),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTypeSelector() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: AppTheme.glassDecoration(
-        context: context,
-        opacity: 0.1,
-        borderRadius: 20,
-      ),
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassDecoration(context: context, opacity: 0.8, borderRadius: 28, hasGlow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                _selectedType == 'students' ? Icons.school_rounded : 
-                _selectedType == 'teachers' ? Icons.work_rounded : Icons.people_rounded,
-                size: 14,
-                color: AppTheme.neonBlue,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "DATA CATEGORY",
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.neonBlue,
-                  letterSpacing: 2.0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          const Text("SELECT WORKSTREAM", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondaryColor, letterSpacing: 2.0)),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _selectedType,
-            decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero),
-            dropdownColor: Colors.white,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
             items: const [
-              DropdownMenuItem(value: 'students', child: Text('Student Database')),
-              DropdownMenuItem(value: 'parents', child: Text('Parent Profiles')),
-              DropdownMenuItem(value: 'teachers', child: Text('Faculty Members')),
+              DropdownMenuItem(value: 'students', child: Text('Basic Students')),
+              DropdownMenuItem(value: 'parents', child: Text('Parent Directory')),
+              DropdownMenuItem(value: 'teachers', child: Text('Staff Roster')),
+              DropdownMenuItem(value: 'sections', child: Text('School Sections')),
+              DropdownMenuItem(value: 'classes', child: Text('Academic Classes')),
+              DropdownMenuItem(value: 'fees', child: Text('Fee Structures')),
+              DropdownMenuItem(value: 'map_parents', child: Text('Parent-Student Linking')),
+              DropdownMenuItem(value: 'assign_teachers', child: Text('Teacher Assignments')),
+              DropdownMenuItem(value: 'ultimate_students', child: Text('Ultimate Unified Import')),
             ],
-            onChanged: _isLoading ? null : (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedType = val;
-                  _pickedFile = null;
-                  _previewData = [];
-                  _uploadStatus = null;
-                });
-              }
-            },
-            isExpanded: true,
+            onChanged: _isLoading ? null : (val) => setState(() {
+              _selectedType = val!;
+              _pickedFile = null;
+              _fullData = [];
+              _previewData = [];
+              _showMapping = false;
+              _uploadStatus = null;
+            }),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGuidelineCard() {
+  Widget _buildFormatDiscovery() {
+    final fields = _importTypeConfigs[_selectedType]!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.neonBlue.withValues(alpha: 0.05),
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.neonBlue.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.info_outline_rounded, color: AppTheme.neonBlue, size: 20),
-              const SizedBox(width: 12),
-              const Text(
-                'Import Guidelines',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.neonBlue),
-              ),
+              Icon(Icons.terminal_rounded, size: 18, color: AppTheme.primaryColor),
+              SizedBox(width: 12),
+              Text("Expected Schema", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            _getFormatGuide(),
-            style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.blueGrey),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: fields.map((f) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+              ),
+              child: Text(f, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+            )).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilePicker() {
+  Widget _buildFileDropZone() {
     final hasFile = _pickedFile != null;
-    final color = hasFile ? AppTheme.neonEmerald : AppTheme.neonBlue;
-
     return InkWell(
       onTap: _isLoading ? null : _pickFile,
       borderRadius: BorderRadius.circular(32),
       child: Container(
-        height: 200,
+        height: 180,
         decoration: AppTheme.glassDecoration(
           context: context,
           opacity: 0.05,
           borderRadius: 32,
-          borderColor: color.withValues(alpha: 0.3),
-        ).copyWith(
-          border: Border.all(color: color.withValues(alpha: 0.4), style: BorderStyle.solid, width: 2),
+          borderColor: hasFile ? AppTheme.neonEmerald.withValues(alpha: 0.3) : AppTheme.primaryColor.withValues(alpha: 0.2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(hasFile ? Icons.check_circle_rounded : Icons.cloud_upload_rounded, size: 48, color: color),
+            Icon(
+              hasFile ? Icons.task_alt_rounded : Icons.snippet_folder_rounded,
+              size: 48,
+              color: hasFile ? AppTheme.neonEmerald : AppTheme.primaryColor,
             ),
             const SizedBox(height: 16),
             Text(
-              hasFile ? _pickedFile!.name : 'Drop file or Click to Browse',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-              textAlign: TextAlign.center,
+              hasFile ? _pickedFile!.name : "Synchronize Local File",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: hasFile ? AppTheme.neonEmerald : AppTheme.primaryColor),
             ),
-            const SizedBox(height: 8),
-            Text(
-              hasFile ? '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB' : 'Standard CSV or TXT format supported',
-              style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-            ),
+            if (!hasFile)
+              const Text("CSV or TXT documents supported", style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryColor)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPreviewSection() {
+  Widget _buildFieldMappingSection() {
+    final requiredFields = _importTypeConfigs[_selectedType]!;
+    final csvHeaders = _fullData[0].map((e) => e.toString()).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Data Preview",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        const Text("Field Mapping Intelligence", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         Container(
-          decoration: AppTheme.glassDecoration(
-            context: context,
-            opacity: 0.2,
-            borderRadius: 24,
+          padding: const EdgeInsets.all(24),
+          decoration: AppTheme.glassDecoration(context: context, opacity: 0.4, borderRadius: 28),
+          child: Column(
+            children: requiredFields.map((field) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Text(field, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.grey),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<int>(
+                        value: _fieldMapping[field],
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        hint: const Text("Select Column", style: TextStyle(fontSize: 12)),
+                        items: List.generate(csvHeaders.length, (i) => DropdownMenuItem(
+                          value: i,
+                          child: Text(csvHeaders[i], style: const TextStyle(fontSize: 12, overflow: TextOverflow.ellipsis)),
+                        )),
+                        onChanged: (val) => setState(() => _fieldMapping[field] = val!),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewSection() {
+    final headers = _fullData[0];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Data Intelligence Preview", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        Container(
+          decoration: AppTheme.glassDecoration(context: context, opacity: 0.2, borderRadius: 24),
           clipBehavior: Clip.antiAlias,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
-              columns: _previewData[0].map((e) => DataColumn(label: Text(e.toString().toUpperCase()))).toList(),
-              rows: _previewData.skip(1).map((row) {
-                return DataRow(cells: row.map((cell) => DataCell(Text(cell.toString()))).toList());
-              }).toList(),
+              headingRowColor: WidgetStateProperty.all(AppTheme.primaryColor.withValues(alpha: 0.05)),
+              columns: headers.map((e) => DataColumn(label: Text(e.toString().toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900)))).toList(),
+              rows: _previewData.skip(1).map((row) => DataRow(
+                cells: row.map((c) => DataCell(Text(c.toString(), style: const TextStyle(fontSize: 12)))).toList(),
+              )).toList(),
             ),
           ),
         ),
@@ -356,81 +470,44 @@ class _BulkImportScreenState extends State<BulkImportScreen> {
     );
   }
 
-  Widget _buildStatusMessage() {
-    final isSuccess = _uploadStatus!.startsWith('Success');
-    final color = isSuccess ? AppTheme.neonEmerald : Colors.redAccent;
-
+  Widget _buildStatusCard() {
+    final isSuccess = _uploadStatus!.contains('Success');
     return Container(
       padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 32),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: (isSuccess ? AppTheme.neonEmerald : Colors.red).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: (isSuccess ? AppTheme.neonEmerald : Colors.red).withValues(alpha: 0.2)),
       ),
-      child: Row(
-        children: [
-          Icon(isSuccess ? Icons.check_circle_rounded : Icons.error_rounded, color: color),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              _uploadStatus!,
-              style: TextStyle(fontWeight: FontWeight.bold, color: color),
-            ),
-          ),
-        ],
-      ),
+      child: Text(_uploadStatus!, style: TextStyle(fontWeight: FontWeight.bold, color: isSuccess ? AppTheme.successColorDark : Colors.red)),
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionSuite() {
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
-          height: 60,
+          height: 64,
           child: ElevatedButton(
-            onPressed: _fullData.isNotEmpty && !_isLoading ? _uploadFile : null,
+            onPressed: _fullData.isNotEmpty && !_isLoading ? _initiateImport : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 8,
-              shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+              elevation: 4,
             ),
             child: _isLoading 
-                ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                      SizedBox(width: 16),
-                      Text("PROCESSING...", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ) 
-                : const Text('INITIATE SYSTEM IMPORT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.0)),
+              ? const LoadingIndicator(size: 24, color: Colors.white)
+              : const Text("EXECUTE MIGRATION", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.5, color: Colors.white)),
           ),
         ),
-        if (!_isLoading && _fullData.isNotEmpty) ...[
-          const SizedBox(height: 16),
+        if (_pickedFile != null)
           TextButton(
-            onPressed: _isLoading ? null : () => setState(() {
-              _pickedFile = null;
-              _fullData = [];
-              _previewData = [];
-              _uploadStatus = null;
-            }),
-            child: const Text("Clear Selection", style: TextStyle(color: Colors.redAccent)),
+            onPressed: () => setState(() { _pickedFile = null; _fullData = []; _previewData = []; _showMapping = false; }),
+            child: const Text("Cancel Migration", style: TextStyle(color: Colors.redAccent)),
           ),
-        ],
       ],
     );
-  }
-
-  String _getFormatGuide() {
-    if (_selectedType == 'students') {
-      return '• Columns: first_name, last_name, parent_email\n• Optional: admission_number (Automatic if blank), dob, gender';
-    } else {
-      return '• Columns: name, email, phone\n• Optional: address, department';
-    }
   }
 }

@@ -28,6 +28,25 @@ class SectionDetailScreen extends StatefulWidget {
 }
 
 class _SectionDetailScreenState extends State<SectionDetailScreen> {
+  late SectionModel _section;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = widget.section;
+  }
+
+  Future<void> _refreshSection() async {
+    try {
+      final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
+      final fresh = await sectionService.getSection(int.parse(_section.id));
+      if (fresh != null && mounted) {
+        setState(() => _section = SectionModel.fromMap(fresh));
+      }
+    } catch (e) {
+      debugPrint('Error refreshing section: $e');
+    }
+  }
 
   Future<Map<String, String>> _fetchUserNames(List<String> userIds, UserServiceApi userService) async {
     final names = <String, String>{};
@@ -111,7 +130,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
 
 
   Future<Map<String, String>> _fetchAllUserNames(UserServiceApi userService) async {
-    final allUserIds = [...widget.section.assignedPrincipalIds, ...widget.section.assignedBursarIds];
+    final allUserIds = [..._section.assignedPrincipalIds, ..._section.assignedBursarIds];
     return _fetchUserNames(allUserIds, userService);
   }
 
@@ -131,14 +150,12 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: widget.section.sectionName,
+        title: _section.sectionName,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Refresh',
-            onPressed: () {
-              setState(() {});
-            },
+            onPressed: _refreshSection,
           ),
         ],
       ),
@@ -161,9 +178,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
           ),
         ),
         child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {});
-          },
+          onRefresh: _refreshSection,
           color: AppTheme.primaryColor,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -212,25 +227,25 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                       context,
                       icon: Icons.badge,
                       title: 'Section Name',
-                      value: widget.section.sectionName,
+                      value: _section.sectionName,
                     ),
                     _buildModernDetailItem(
                       context,
                       icon: Icons.description,
                       title: 'About Section',
-                      value: widget.section.aboutSection ?? 'No description provided',
+                      value: _section.aboutSection ?? 'No description provided',
                     ),
                     _buildModernDetailItem(
                       context,
                       icon: Icons.calendar_today,
                       title: 'Created',
-                      value: widget.section.createdAt.toString().substring(0, 16),
+                      value: _section.createdAt.toString().substring(0, 16),
                     ),
                     _buildModernDetailItem(
                       context,
                       icon: Icons.update,
                       title: 'Last Modified',
-                      value: widget.section.lastModified.toString().substring(0, 16),
+                      value: _section.lastModified.toString().substring(0, 16),
                     ),
                   ],
                 ),
@@ -284,8 +299,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                               ? 'Loading...'
                               : snapshot.hasError
                               ? 'Error loading names'
-                              : (userNames.isNotEmpty && widget.section.assignedPrincipalIds.isNotEmpty)
-                              ? widget.section.assignedPrincipalIds
+                              : (userNames.isNotEmpty && _section.assignedPrincipalIds.isNotEmpty)
+                              ? _section.assignedPrincipalIds
                               .map((id) => userNames[id] ?? 'Unknown')
                               .join(', ')
                               : 'No principals assigned',
@@ -299,8 +314,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                               ? 'Loading...'
                               : snapshot.hasError
                               ? 'Error loading names'
-                              : (userNames.isNotEmpty && widget.section.assignedBursarIds.isNotEmpty)
-                              ? widget.section.assignedBursarIds
+                              : (userNames.isNotEmpty && _section.assignedBursarIds.isNotEmpty)
+                              ? _section.assignedBursarIds
                               .map((id) => userNames[id] ?? 'Unknown')
                               .join(', ')
                               : 'No bursars assigned',
@@ -350,9 +365,9 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                     const SizedBox(height: 16),
                     FutureBuilder<List<String>>(
                       future: _fetchSessionNames(
-                        widget.section.schoolId,
-                        widget.section.id,
-                        widget.section.academicSessionIds,
+                        _section.schoolId,
+                        _section.id,
+                        _section.academicSessionIds,
                         sessionService,
                       ),
                       builder: (context, snapshot) {
@@ -400,7 +415,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                   backgroundColor: AppTheme.primaryColor,
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => EditSectionScreen(section: widget.section)),
+                    MaterialPageRoute(builder: (_) => EditSectionScreen(section: _section)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -408,22 +423,28 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                   text: 'Assign Principal',
                   icon: Icons.person_add,
                   backgroundColor: Colors.blue,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => AssignPrincipalScreen(section: widget.section)),
-                  ),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => AssignPrincipalScreen(section: _section)),
+                    );
+                    if (result == true) await _refreshSection();
+                  },
                 ),
                 const SizedBox(height: 12),
                 CustomButton(
                   text: 'Assign Bursar',
                   icon: Icons.account_balance_wallet,
                   backgroundColor: Colors.indigo,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => AssignBursarScreen(section: widget.section)),
-                  ),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => AssignBursarScreen(section: _section)),
+                    );
+                    if (result == true) await _refreshSection();
+                  },
                 ),
                 const SizedBox(height: 12),
                 CustomButton(

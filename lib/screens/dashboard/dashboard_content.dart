@@ -232,38 +232,21 @@ class _DashboardContentState extends State<DashboardContent> {
   }
 
   Widget _buildWelcomeHeader(BuildContext context, AuthServiceApi authService) {
-    final userMap = authService.currentUser;
     final user = authService.currentUserModel;
     final name = user?.fullName.split(' ').first ?? widget.role;
 
-    String getNames(String key, String nameField) {
-      if (userMap != null && userMap[key] is List) {
-        final list = userMap[key] as List;
-        if (list.isNotEmpty) {
-          final names = list.map((e) {
-            if (e is Map) return e[nameField] ?? e['name'] ?? e['id'].toString();
-            return e.toString();
-          }).where((s) => s != 'null' && s.isNotEmpty).toList();
-          if (names.isNotEmpty) return names.join(', ');
-        }
-      }
-      return '';
-    }
-
-    final sectionsDisplay = getNames('assigned_sections', 'section_name');
-    final classesDisplay = getNames('assigned_classes', 'class_name');
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      padding: const EdgeInsets.all(32),
       decoration: AppTheme.glassDecoration(
         context: context,
         opacity: 0.8,
-        borderRadius: 28,
+        borderRadius: 32,
         hasGlow: true,
+        borderColor: AppTheme.primaryColor.withValues(alpha: 0.1),
       ).copyWith(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.15),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
             AppTheme.neonBlue.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
@@ -272,82 +255,77 @@ class _DashboardContentState extends State<DashboardContent> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryColor, AppTheme.neonBlue],
+          Hero(
+            tag: 'dashboard_avatar',
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(colors: [AppTheme.primaryColor, AppTheme.neonBlue]),
+                boxShadow: [
+                  BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 5),
+                ],
+                border: Border.all(color: Colors.white, width: 4),
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                name[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Center(child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 36)),
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 24),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Hello,",
+                  "ESTEEMED",
                   style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondaryColor,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.primaryColor.withValues(alpha: 0.6),
+                    letterSpacing: 2.0,
                   ),
                 ),
                 Text(
-                  name,
+                  name.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: -1.0,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
-                if (sectionsDisplay.isNotEmpty || classesDisplay.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      if (sectionsDisplay.isNotEmpty) "Section: $sectionsDisplay",
-                      if (classesDisplay.isNotEmpty) "Class: $classesDisplay"
-                    ].join(' • '),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.primaryColor.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                const SizedBox(height: 8),
+                _buildRoleBadge(context),
               ],
             ),
           ),
-          if (context.isDesktop)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.neonEmerald.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.wb_sunny_rounded, color: AppTheme.neonEmerald, size: 28),
-            ),
+          if (!context.isMobile)
+            _buildPulseTimer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPulseTimer() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.neonEmerald.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.neonEmerald.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(color: AppTheme.neonEmerald, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            "SYSTEM SYNCED",
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.neonEmerald, letterSpacing: 1),
+          ),
         ],
       ),
     );
@@ -587,12 +565,20 @@ class _DashboardContentState extends State<DashboardContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Financial Analytics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+        Row(
+          children: [
+            const Icon(Icons.analytics_rounded, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
+            Text(
+              'EXECUTIVE ANALYTICS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                letterSpacing: 1.5,
               ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         FinancialBarChart(
@@ -601,49 +587,78 @@ class _DashboardContentState extends State<DashboardContent> {
           cashInHand: widget.dashboardStats['totalFees'] ?? 0.0,
           bankBalance: widget.dashboardStats['outstandingDebt'] ?? 0.0,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         ResponsiveGridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mobileColumns: 2,
+          mobileColumns: 1,
           tabletColumns: 2,
-          desktopColumns: 4,
+          desktopColumns: 2,
           runSpacing: 20,
           spacing: 20,
-          childAspectRatio: context.isMobile ? 0.95 : 1.3,
+          childAspectRatio: context.isMobile ? 2.5 : 1.8,
           children: [
-            DashboardCard(
-              title: 'Total Income',
+            _buildExecutiveCard(
+              title: 'CUMULATIVE INCOME',
               value: Formatters.formatCurrency((widget.dashboardStats['totalGenerated'] ?? 0).toDouble()),
-              icon: Icons.trending_up_rounded,
+              icon: Icons.account_balance_wallet_rounded,
               color: AppTheme.neonEmerald,
-              trend: '+12%',
-              isPositive: true,
+              subtitle: 'Gross revenue across all sectors',
             ),
-            DashboardCard(
-              title: 'Total Expenses',
+            _buildExecutiveCard(
+              title: 'OPERATIONAL OUTFLOW',
               value: Formatters.formatCurrency((widget.dashboardStats['totalSpent'] ?? 0).toDouble()),
-              icon: Icons.trending_down_rounded,
+              icon: Icons.outbox_rounded,
               color: Colors.redAccent,
-              trend: '-5%',
-              isPositive: false,
+              subtitle: 'System-wide expenditures',
             ),
-            DashboardCard(
-              title: 'Total Fees Invoiced',
+            _buildExecutiveCard(
+              title: 'INVOICED RECEIVABLES',
               value: Formatters.formatCurrency((widget.dashboardStats['totalFees'] ?? 0).toDouble()),
               icon: Icons.receipt_long_rounded,
               color: AppTheme.neonBlue,
+              subtitle: 'Projected fee throughput',
             ),
-            DashboardCard(
-              title: 'Outstanding Debt',
+            _buildExecutiveCard(
+              title: 'DEBT EXPOSURE',
               value: Formatters.formatCurrency((widget.dashboardStats['outstandingDebt'] ?? 0).toDouble()),
-              icon: Icons.warning_amber_rounded,
+              icon: Icons.error_outline_rounded,
               color: Colors.orange,
-              isPositive: false,
+              subtitle: 'Uncollected financial obligations',
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildExecutiveCard({required String title, required String value, required IconData icon, required Color color, required String subtitle}) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassDecoration(context: context, opacity: 0.7, borderRadius: 28, hasGlow: false),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey[600], letterSpacing: 1)),
+                const SizedBox(height: 4),
+                Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.primaryColor)),
+                const SizedBox(height: 4),
+                Text(subtitle, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

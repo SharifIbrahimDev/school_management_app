@@ -108,6 +108,13 @@ class ApiConfig {
   // Bulk Import
   static const String importUsers = '/import/users';
   static const String importStudentsBulk = '/import/students';
+  static const String importSections = '/import/sections';
+  static const String importClasses = '/import/classes';
+  static const String importFees = '/import/fees';
+  static const String importMapParents = '/import/map-parents';
+  static const String importAssignTeachers = '/import/assign-teachers';
+  static const String importSuperSections = '/import/super-sections';
+  static const String importUltimateStudents = '/import/ultimate-students';
   static String studentsImport(int schoolId) => '/schools/$schoolId/students/import';
   
   // Reports

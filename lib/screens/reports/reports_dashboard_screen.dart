@@ -5,14 +5,11 @@ import '../../core/services/report_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/financial_chart.dart';
 import '../../widgets/analytics_charts.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/loading_indicator.dart';
-import '../../core/utils/error_handler.dart';
-import '../../widgets/error_display_widget.dart';
 import '../../core/services/auth_service_api.dart';
 import 'debtors_list_screen.dart';
 import 'financial_report_screen.dart';
@@ -77,23 +74,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage('assets/images/auth_bg_pattern.png'),
-            fit: BoxFit.cover,
-            opacity: 0.05,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.1),
-              AppTheme.accentColor.withValues(alpha: 0.2),
-              Colors.white,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ),
-        ),
+        decoration: AppTheme.mainGradientDecoration(context),
         child: _isLoading
             ? const Center(child: LoadingIndicator(message: 'Generating financial intelligence...'))
             : AppTheme.constrainedContent(
@@ -103,6 +84,8 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildIntelligenceHeader(),
+                      const SizedBox(height: 24),
                       ResponsiveRowColumn(
                         rowOnMobile: false,
                         rowOnTablet: true,
@@ -158,6 +141,44 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildIntelligenceHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.neonEmerald.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.analytics_rounded, color: AppTheme.neonEmerald, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "EXECUTIVE SUMMARY",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textSecondaryColor,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "School Revenue performance is currently stable.",
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondaryColor),
+          ),
+        ],
       ),
     );
   }
