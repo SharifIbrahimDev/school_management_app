@@ -58,7 +58,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
     
     final currentUser = UserModel.fromMap(currentUserMap);
     if (currentUser.role != UserRole.proprietor) {
-      AppSnackbar.showError(context, message: 'Access Denied');
+      AppSnackbar.showError(context, message: 'Access Denied: Only the System Proprietor can modify user accounts.');
       return;
     }
 
@@ -76,7 +76,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
       );
 
       if (context.mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, true);
         AppSnackbar.showSuccess(context, message: 'User updated successfully');
       }
     } catch (e) {

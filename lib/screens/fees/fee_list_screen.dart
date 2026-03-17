@@ -192,6 +192,7 @@ class _FeeListScreenState extends State<FeeListScreen> {
         sessionId: int.tryParse(_selectedSessionId ?? ''),
         termId: int.tryParse(_selectedTermId ?? ''),
         classId: int.tryParse(_selectedClassId ?? ''),
+        studentId: int.tryParse(widget.studentId ?? ''),
       );
       
       if (mounted) {
@@ -453,83 +454,101 @@ class _FeeListScreenState extends State<FeeListScreen> {
                                   hasGlow: true,
                                   borderColor: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.all(20),
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),
-                                  ),
-                                  title: Text(
-                                    fee.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      'Due: ${Formatters.formatDate(fee.dueDate)}',
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                    ),
-                                  ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      if (isEditing)
-                                        SizedBox(
-                                          width: 100,
-                                          child: TextField(
-                                            controller: _editAmountController,
-                                            keyboardType: TextInputType.number,
-                                            autofocus: true,
-                                            decoration: const InputDecoration(prefixText: '₦', isDense: true),
-                                            onSubmitted: (val) {
-                                              final amt = double.tryParse(val);
-                                              if (amt != null) {
-                                                _updateFeeAmount(fee, amt);
-                                              } else {
-                                                setState(() => _editingFeeId = null);
-                                              }
-                                            },
-                                          ),
-                                        )
-                                      else
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (canAddFee) {
-                                              setState(() {
-                                                _editingFeeId = fee.id;
-                                                _editAmountController.text = fee.amount.toString();
-                                              });
-                                          } else {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(builder: (context) => FeeDetailScreen(fee: fee)),
-                                              ).then((_) => _loadFees());
-                                            }
-                                          },
-                                          child: Text(
-                                            Formatters.formatCurrency(fee.amount),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                              color: AppTheme.primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                      const SizedBox(height: 4),
-                                      const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
-                                    ],
-                                  ),
+                                child: InkWell(
                                   onTap: isEditing ? null : () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (context) => FeeDetailScreen(fee: fee)),
                                     ).then((_) => _loadFees());
                                   },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Row(
+                                      children: [
+                                        // Leading Icon
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        // Text Part
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                fee.name,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Due: ${Formatters.formatDate(fee.dueDate)}',
+                                                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Trailing Part
+                                        Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            if (isEditing)
+                                              SizedBox(
+                                                width: 100,
+                                                child: TextField(
+                                                  controller: _editAmountController,
+                                                  keyboardType: TextInputType.number,
+                                                  autofocus: true,
+                                                  decoration: const InputDecoration(prefixText: '₦', isDense: true),
+                                                  onSubmitted: (val) {
+                                                    final amt = double.tryParse(val);
+                                                    if (amt != null) {
+                                                      _updateFeeAmount(fee, amt);
+                                                    } else {
+                                                      setState(() => _editingFeeId = null);
+                                                    }
+                                                  },
+                                                ),
+                                              )
+                                            else
+                                              GestureDetector(
+                                                onTap: () {
+                                                  if (canAddFee) {
+                                                    setState(() {
+                                                      _editingFeeId = fee.id;
+                                                      _editAmountController.text = fee.amount.toString();
+                                                    });
+                                                  } else {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(builder: (context) => FeeDetailScreen(fee: fee)),
+                                                    ).then((_) => _loadFees());
+                                                  }
+                                                },
+                                                child: Text(
+                                                  Formatters.formatCurrency(fee.amount),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 18,
+                                                    color: AppTheme.primaryColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            const SizedBox(height: 4),
+                                            const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               );
                             }).toList(),

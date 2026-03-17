@@ -44,7 +44,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   Future<void> _refreshClass() async {
     try {
       final classService = Provider.of<ClassServiceApi>(context, listen: false);
-      final fresh = await classService.getClass(int.parse(_classModel.id));
+      final fresh = await classService.getClass(int.parse(_classModel.id), forceRefresh: true);
       if (fresh != null && mounted) {
         setState(() => _classModel = ClassModel.fromMap(fresh));
       }
@@ -216,7 +216,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                               color: Colors.white,
                             ),
                             label: Text(
-                              _classModel.assignedTeacherUserId != null && _classModel.assignedTeacherUserId!.isNotEmpty ? 'Change/Remove Teacher' : 'Assign Teacher',
+                              _classModel.assignedTeacherUserId != null && _classModel.assignedTeacherUserId!.isNotEmpty ? 'Unassign Teacher' : 'Assign Teacher',
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.colorScheme.primary,

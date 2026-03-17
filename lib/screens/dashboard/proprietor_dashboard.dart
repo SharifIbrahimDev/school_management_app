@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
+import '../../core/services/auth_service_api.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/academic_session_model.dart';
 import '../../core/models/class_model.dart';
@@ -214,20 +215,18 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
   }
 
   Future<void> _loadStats() async {
-    if (_selectedSectionId == null) return;
-
     try {
       final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
       final feeService = Provider.of<FeeServiceApi>(context, listen: false);
 
       final statsData = await transactionService.getDashboardStats(
-        sectionId: int.tryParse(_selectedSectionId!),
+        sectionId: _selectedSectionId != null ? int.tryParse(_selectedSectionId!) : null,
         sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
         termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
       );
 
       final feesData = await feeService.getFeeSummary(
-        sectionId: int.tryParse(_selectedSectionId!),
+        sectionId: _selectedSectionId != null ? int.tryParse(_selectedSectionId!) : null,
         sessionId: _selectedSessionId != null ? int.tryParse(_selectedSessionId!) : null,
         termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
       );
@@ -245,29 +244,28 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
         _isLoading = false;
       });
 
-      await _loadProprietorAnalytics(_selectedSectionId!);
+      await _loadProprietorAnalytics(_selectedSectionId);
     } catch (e) {
       debugPrint('Error loading stats: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        // Don't show error message for stats failure, just show empty stats
       });
     }
   }
 
-  Future<void> _loadProprietorAnalytics(String sectionId) async {
+  Future<void> _loadProprietorAnalytics(String? sectionId) async {
     try {
       final attendanceService = Provider.of<AttendanceServiceApi>(context, listen: false);
       final examService = Provider.of<ExamServiceApi>(context, listen: false);
 
       final attendancePromise = attendanceService.getSectionSummary(
-        sectionId: int.parse(sectionId),
+        sectionId: sectionId != null ? int.parse(sectionId) : 0,
         date: DateTime.now(),
       );
       
       final examPromise = examService.getAcademicAnalytics(
-        sectionId: int.parse(sectionId),
+        sectionId: sectionId != null ? int.parse(sectionId) : 0,
       );
 
       final results = await Future.wait<dynamic>([attendancePromise, examPromise]);
@@ -330,7 +328,7 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
             isLoading: _isLoading,
             errorMessage: null,
             onSectionChanged: (value) async {
-              if (value != null && value != _selectedSectionId) {
+              if (value != _selectedSectionId) {
                 setState(() {
                   _selectedSectionId = value;
                   _selectedSessionId = null;
@@ -340,7 +338,13 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
                   _isLoading = true;
                 });
                 await DashboardFilterService.saveFilters('Proprietor', sectionId: value);
-                await _loadSessions(value);
+                if (value != null) {
+                  await _loadSessions(value);
+                } else {
+                  // If "All Sections" is selected, we might want to load global stats
+                  // or just let _loadStats handle the null sectionId if the API supports it
+                  await _loadStats(); 
+                }
               }
             },
             onSessionChanged: (value) async {
@@ -446,6 +450,20 @@ class _ProprietorDashboardState extends State<ProprietorDashboard> {
 
   Widget _buildNoSectionsScreen() {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.blueGrey),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final authService = Provider.of<AuthServiceApi>(context, listen: false);
+              await authService.logout();
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: EmptyStateWidget(
           icon: Icons.school_outlined,

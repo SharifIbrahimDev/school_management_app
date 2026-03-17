@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/transaction_model.dart';
 import '../../core/models/user_model.dart';
@@ -11,6 +11,7 @@ import '../../core/services/receipt_service.dart';
 import '../../core/services/school_service_api.dart';
 import '../../core/services/student_service_api.dart';
 import '../../widgets/custom_app_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
   final TransactionModel transaction;
@@ -26,6 +27,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   bool _isGeneratingReceipt = false;
   UserModel? _currentUser;
   String? _studentName;
+  bool _isVerifying = false;
+  final TextEditingController _rejectionController = TextEditingController();
 
   @override
   void initState() {
@@ -121,6 +124,104 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _verifyTransaction(TransactionStatus status) async {
+    String? reason;
+    
+    if (status == TransactionStatus.rejected) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reject Transaction'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please provide a reason for rejection (optional):'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _rejectionController,
+                decoration: const InputDecoration(
+                  hintText: 'Reason for rejection',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Reject', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm != true) return;
+      reason = _rejectionController.text.trim();
+    } else {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Approve Transaction'),
+          content: const Text('Are you sure you want to approve this manual payment?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Approve', style: TextStyle(color: AppTheme.neonEmerald)),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
+    setState(() => _isVerifying = true);
+    try {
+      final transactionService = Provider.of<TransactionServiceApi>(context, listen: false);
+      await transactionService.verifyTransaction(
+        int.parse(widget.transaction.id),
+        status: status.name,
+        rejectionReason: reason,
+      );
+      
+      if (mounted) {
+        AppSnackbar.showSuccess(context, message: 'Transaction ${status == TransactionStatus.approved ? "approved" : "rejected"} successfully');
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isVerifying = false);
+        AppSnackbar.showError(context, message: 'Verification failed: $e');
+      }
+    }
+  }
+
+  Future<void> _viewProof() async {
+    if (widget.transaction.proofUrl == null) return;
+    final url = Uri.parse(widget.transaction.proofUrl!);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        AppSnackbar.showError(context, message: 'Could not open proof of payment URL');
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _rejectionController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final canDelete = _currentUser?.role == UserRole.proprietor || 
@@ -171,7 +272,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               children: [
                 _buildDetailCard(),
                 const SizedBox(height: 24),
-                if (widget.transaction.transactionType == TransactionType.credit)
+                if (widget.transaction.transactionType == TransactionType.credit && 
+                    widget.transaction.status == TransactionStatus.approved)
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -189,6 +291,46 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       ),
                     ),
                   ),
+
+                if (widget.transaction.status == TransactionStatus.pending && 
+                    (UserRole.proprietor == _currentUser?.role || 
+                     UserRole.bursar == _currentUser?.role || 
+                     UserRole.principal == _currentUser?.role)) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isVerifying ? null : () => _verifyTransaction(TransactionStatus.rejected),
+                          icon: const Icon(Icons.close_rounded),
+                          label: const Text('Reject'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _isVerifying ? null : () => _verifyTransaction(TransactionStatus.approved),
+                          icon: _isVerifying 
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.check_rounded),
+                          label: const Text('Approve'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.neonEmerald,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -268,6 +410,27 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               iconColor: Colors.deepOrange,
             ),
           ],
+          if (widget.transaction.proofUrl != null) ...[
+            const Divider(height: 32),
+            _buildItem(
+              icon: Icons.image_search_rounded,
+              title: 'Proof of Payment',
+              value: 'Tap to view document',
+              iconColor: AppTheme.neonBlue,
+              isAction: true,
+              onTap: _viewProof,
+            ),
+          ],
+          if (widget.transaction.status != TransactionStatus.approved) ...[
+            const Divider(height: 32),
+            _buildItem(
+              icon: Icons.info_outline_rounded,
+              title: 'Verification Status',
+              value: widget.transaction.status.name.toUpperCase(),
+              iconColor: widget.transaction.status == TransactionStatus.pending ? Colors.amber : Colors.red,
+              isBold: true,
+            ),
+          ],
         ],
       ),
     );
@@ -280,10 +443,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     required Color iconColor,
     Color? valueColor,
     bool isBold = false,
+    bool isAction = false,
+    VoidCallback? onTap,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return InkWell(
+      onTap: isAction ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -317,7 +485,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             ],
           ),
         ),
-      ],
+        if (isAction)
+          const Icon(Icons.open_in_new_rounded, size: 18, color: AppTheme.neonBlue),
+        ],
+      ),
     );
   }
 }

@@ -46,7 +46,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   Future<void> _refreshStudent() async {
     try {
       final studentService = Provider.of<StudentServiceApi>(context, listen: false);
-      final fresh = await studentService.getStudent(int.parse(_student.id));
+      final fresh = await studentService.getStudent(int.parse(_student.id), forceRefresh: true);
       if (fresh != null && mounted) {
         setState(() => _student = StudentModel.fromMap(fresh));
       }
@@ -69,26 +69,26 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       _currentUser = userMap != null ? UserModel.fromMap(userMap) : null;
 
       String? className;
-      if (widget.student.classId.isNotEmpty) {
+      if (_student.classId.isNotEmpty) {
         try {
-          final classData = await classService.getClass(int.tryParse(widget.student.classId) ?? 0);
+          final classData = await classService.getClass(int.tryParse(_student.classId) ?? 0);
           className = classData?['class_name'] ?? classData?['name'] ?? 'Unknown';
         } catch (e) { className = 'Unknown'; }
       } else { className = 'Unassigned'; }
 
       String? parentName;
-      if (widget.student.parentId != null && widget.student.parentId!.isNotEmpty) {
+      if (_student.parentId != null && _student.parentId!.isNotEmpty) {
         try {
-          final parentData = await userService.getUser(int.tryParse(widget.student.parentId!) ?? 0);
+          final parentData = await userService.getUser(int.tryParse(_student.parentId!) ?? 0);
           parentName = parentData?['full_name'] ?? parentData?['fullName'] ?? 'Unknown';
         } catch (e) { parentName = 'Unknown'; }
       } else { parentName = 'Not assigned'; }
 
-      final primarySectionId = widget.student.sectionIds.isNotEmpty ? int.tryParse(widget.student.sectionIds.first) : null;
+      final primarySectionId = _student.sectionIds.isNotEmpty ? int.tryParse(_student.sectionIds.first) : null;
 
       try {
         if (primarySectionId != null) {
-          _fees = await feeService.getFees(sectionId: primarySectionId, studentId: int.tryParse(widget.student.id));
+          _fees = await feeService.getFees(sectionId: primarySectionId, studentId: int.tryParse(_student.id));
         }
       } catch (e) { debugPrint('Error loading fees: $e'); }
 
@@ -407,7 +407,10 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         if (isAdmin)
           _buildActionButton(Icons.family_restroom_rounded, 'ASSIGN GUARDIAN', AppTheme.accentColor, () async {
             final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AssignParentScreen(student: _student)));
-            if (res == true) _loadData();
+            if (res == true) {
+              await _refreshStudent();
+              _loadData();
+            }
           }),
         const SizedBox(height: 12),
         if (isAdmin)

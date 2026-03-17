@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/user_model.dart';
+import '../../core/services/auth_service_api.dart';
 import '../../core/services/user_service_api.dart';
+import '../../core/services/section_service_api.dart';
 import '../../core/utils/app_theme.dart';
 import '../../widgets/app_snackbar.dart';
 import 'edit_user_screen.dart';
@@ -19,11 +21,62 @@ class UserDetailsScreen extends StatefulWidget {
 }
 
 class _UserDetailsScreenState extends State<UserDetailsScreen> {
+  late UserModel _user;
+  Map<String, String> _sectionNames = {};
+  bool _isLoadingSections = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+    _loadSectionNames();
+  }
+
+  Future<void> _loadSectionNames() async {
+    final allSections = {..._user.assignedSections};
+    if (_user.sectionId != null && _user.sectionId!.isNotEmpty) {
+      allSections.add(_user.sectionId!);
+    }
+
+    if (allSections.isEmpty) return;
+    
+    // Check if any look like IDs (numeric)
+    bool looksLikeIds = allSections.any((s) => int.tryParse(s) != null);
+    if (!looksLikeIds) return;
+
+    try {
+      final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
+      final sections = await sectionService.getSections();
+      final Map<String, String> nameMap = {};
+      for (var s in sections) {
+        nameMap[s['id'].toString()] = s['section_name'] ?? s['name'] ?? 'Section ${s['id']}';
+      }
+      if (mounted) {
+        setState(() => _sectionNames = nameMap);
+      }
+    } catch (e) {
+      debugPrint('Error loading section names: $e');
+    }
+  }
+
+  Future<void> _refreshUser() async {
+    try {
+      final userService = Provider.of<UserServiceApi>(context, listen: false);
+      final fresh = await userService.getUser(int.parse(_user.id), forceRefresh: true);
+      if (fresh != null && mounted) {
+        setState(() => _user = UserModel.fromMap(fresh));
+        _loadSectionNames();
+      }
+    } catch (e) {
+      debugPrint('Error refreshing user: $e');
+    }
+  }
+
   Future<void> _deleteUser(BuildContext context) async {
     final confirmed = await ConfirmationDialog.show(
       context,
       title: 'Decommission Administrator',
-      content: 'Are you sure you want to permanently remove access for ${widget.user.fullName}? All associated session logs will be archived.',
+      content: 'Are you sure you want to permanently remove access for ${_user.fullName}? All associated session logs will be archived.',
       confirmText: 'ARCHIVE & DELETE',
       confirmColor: Colors.red,
       icon: Icons.person_remove_rounded,
@@ -34,7 +87,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
     try {
       final userService = Provider.of<UserServiceApi>(context, listen: false);
-      await userService.deleteUser(int.tryParse(widget.user.id) ?? 0);
+      await userService.deleteUser(int.tryParse(_user.id) ?? 0);
       
       if (context.mounted) {
         Navigator.pop(context);
@@ -47,8 +100,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = widget.user;
+    final user = _user;
     final theme = Theme.of(context);
+    final authService = Provider.of<AuthServiceApi>(context, listen: false);
     final roleColor = _getRoleColor(user.role);
 
     return Scaffold(
@@ -85,11 +139,15 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   children: [
                     _buildInfoRow('Account Node', user.isActive ? 'ACTIVE' : 'SUSPENDED', color: user.isActive ? AppTheme.neonEmerald : Colors.redAccent),
                     _buildInfoRow('Initialization', DateFormat('MMMM dd, yyyy').format(user.createdAt)),
-                    if (user.assignedSections.isNotEmpty) _buildSectionChips(user),
+                    if (user.assignedSections.isNotEmpty || (user.sectionId != null && user.sectionId!.isNotEmpty)) ...[
+                      const SizedBox(height: 16),
+                      Text('ASSIGNED SECTIONS', style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      _buildSectionChips(user),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 32),
-                _buildModernActions(user),
+                _buildModernActions(user, authService.currentUserModel),
                 const SizedBox(height: 48),
               ],
             ),
@@ -140,11 +198,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
 
   Widget _buildQuickStats(UserModel user, Color roleColor) {
+    final allSections = {...user.assignedSections};
+    if (user.sectionId != null && user.sectionId!.isNotEmpty) {
+      allSections.add(user.sectionId!);
+    }
+  
     return Row(
       children: [
         _buildStatChip(Icons.verified_user_rounded, 'STATUS', user.isActive ? 'ACTIVE' : 'OFFLINE', user.isActive ? AppTheme.neonEmerald : Colors.grey),
         const SizedBox(width: 12),
-        _buildStatChip(Icons.layers_rounded, 'ACCESS', '${user.assignedSections.length} SECTS', AppTheme.neonBlue),
+        _buildStatChip(Icons.layers_rounded, 'ACCESS', '${allSections.length} SECTS', AppTheme.neonBlue),
       ],
     );
   }
@@ -175,17 +238,28 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           padding: const EdgeInsets.only(left: 12, bottom: 8),
           child: Row(
             children: [
-              Icon(icon, size: 12, color: AppTheme.primaryColor),
+              Icon(icon, size: 14, color: AppTheme.primaryColor),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.textSecondaryColor)),
+              Text(
+                title, 
+                style: const TextStyle(
+                  fontSize: 11, 
+                  fontWeight: FontWeight.w900, 
+                  letterSpacing: 1.5, 
+                  color: AppTheme.textSecondaryColor
+                )
+              ),
             ],
           ),
         ),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: AppTheme.glassDecoration(context: context, opacity: 0.5, borderRadius: 24),
-          child: Column(children: children),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children
+          ),
         ),
       ],
     );
@@ -193,43 +267,105 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   Widget _buildInfoRow(String label, String value, {Color? color}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color ?? Colors.black87)),
+          Text(
+            label.toUpperCase(), 
+            style: TextStyle(
+              fontSize: 9, 
+              color: Colors.grey[600], 
+              fontWeight: FontWeight.w900, 
+              letterSpacing: 0.5
+            )
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value, 
+            style: TextStyle(
+              fontSize: 14, 
+              fontWeight: FontWeight.bold, 
+              color: color ?? AppTheme.textPrimaryColor
+            )
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSectionChips(UserModel user) {
+    final allSections = {...user.assignedSections};
+    if (user.sectionId != null && user.sectionId!.isNotEmpty) {
+      allSections.add(user.sectionId!);
+    }
+
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 12),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: user.assignedSections.map((s) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: AppTheme.primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1))),
-          child: Text(s.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
-        )).toList(),
+        children: allSections.map((s) {
+          final display = _sectionNames[s] ?? s;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1), 
+              borderRadius: BorderRadius.circular(10), 
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+            ),
+            child: Text(
+              display.toUpperCase(), 
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildModernActions(UserModel user) {
+  Widget _buildModernActions(UserModel targetUser, UserModel? currentUser) {
+    if (currentUser == null) return const SizedBox();
+
+    final isProprietor = currentUser.role == UserRole.proprietor;
+    final isSelf = currentUser.id == targetUser.id;
+
+    if (!isProprietor) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: AppTheme.glassDecoration(context: context, opacity: 0.3, borderRadius: 20),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Colors.grey, size: 18),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'User modifications and decommissioning can only be performed by the System Proprietor.',
+                style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final canModify = true; // Proprietor can modify everyone
+    final canDecommission = !isSelf; // Proprietor can't decommission self
+
     return Column(
       children: [
-        _buildActionButton(Icons.auto_fix_high_rounded, 'MODIFY CREDENTIALS', AppTheme.primaryColor, () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => EditUserScreen(user: user)));
-        }),
-        const SizedBox(height: 12),
-        _buildActionButton(Icons.lock_reset_rounded, 'RESET PASSWORD', AppTheme.accentColor, () {}),
-        const SizedBox(height: 12),
-        _buildActionButton(Icons.no_accounts_rounded, 'DECOMMISSION NODE', Colors.redAccent, () => _deleteUser(context), outlined: true),
+        if (canModify) ...[
+          _buildActionButton(Icons.auto_fix_high_rounded, 'MODIFY CREDENTIALS', AppTheme.primaryColor, () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditUserScreen(user: targetUser)));
+            if (res == true) await _refreshUser();
+          }),
+          const SizedBox(height: 12),
+          _buildActionButton(Icons.lock_reset_rounded, 'RESET PASSWORD', AppTheme.accentColor, () {}),
+        ],
+        if (canDecommission) ...[
+          const SizedBox(height: 12),
+          _buildActionButton(Icons.no_accounts_rounded, 'DECOMMISSION NODE', Colors.redAccent, () => _deleteUser(context), outlined: true),
+        ],
       ],
     );
   }

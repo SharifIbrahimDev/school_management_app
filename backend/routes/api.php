@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Transactions
         Route::apiResource('transactions', TransactionController::class);
+        Route::post('transactions/{transaction}/verify', [TransactionController::class, 'verifyManualPayment']);
         Route::get('transactions-dashboard-stats', [TransactionController::class, 'dashboardStats']);
         Route::get('transactions-report', [TransactionController::class, 'report']);
         Route::get('transactions-monthly-summary', [TransactionController::class, 'monthlySummary']);

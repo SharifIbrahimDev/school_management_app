@@ -130,6 +130,7 @@ class ApiConfig {
   static String transactionsDashboardStats(int schoolId) => '/schools/$schoolId/transactions-dashboard-stats';
   static String transactionsReport(int schoolId) => '/schools/$schoolId/transactions-report';
   static String transactionsMonthlySummary(int schoolId) => '/schools/$schoolId/transactions-monthly-summary';
+  static String verifyTransaction(int schoolId, int id) => '/schools/$schoolId/transactions/$id/verify';
   
   // Timetables
   static String timetables(dynamic schoolId) => '/schools/$schoolId/timetables';

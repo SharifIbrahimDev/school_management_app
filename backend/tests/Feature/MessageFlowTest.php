@@ -44,7 +44,7 @@ class MessageFlowTest extends TestCase
             'body' => 'This is a test message body.',
         ];
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->postJson('/api/messages', $payload);
 
         $response->assertStatus(201)
@@ -68,7 +68,7 @@ class MessageFlowTest extends TestCase
             'body' => 'Test message',
         ];
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->postJson('/api/messages', $payload);
 
         $response->assertStatus(422);
@@ -80,7 +80,7 @@ class MessageFlowTest extends TestCase
             'recipient_id' => $this->sender->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->getJson('/api/messages');
 
         $response->assertStatus(200)
@@ -95,7 +95,7 @@ class MessageFlowTest extends TestCase
             'sender_id' => $this->sender->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->getJson('/api/messages');
 
         $response->assertStatus(200)
@@ -114,7 +114,7 @@ class MessageFlowTest extends TestCase
             'recipient_id' => $this->sender->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->getJson('/api/messages/unread-count');
 
         $response->assertStatus(200)
@@ -127,7 +127,7 @@ class MessageFlowTest extends TestCase
             'recipient_id' => $this->sender->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->postJson("/api/messages/{$message->id}/read");
 
         $response->assertStatus(200);
@@ -146,7 +146,7 @@ class MessageFlowTest extends TestCase
             'recipient_id' => $this->recipient->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->postJson("/api/messages/{$message->id}/read");
 
         $response->assertStatus(404);
@@ -158,7 +158,7 @@ class MessageFlowTest extends TestCase
             'sender_id' => $this->sender->id,
         ]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->deleteJson("/api/messages/{$message->id}");
 
         $response->assertStatus(200);
@@ -169,7 +169,7 @@ class MessageFlowTest extends TestCase
     {
         User::factory()->count(5)->create(['school_id' => $this->schoolId]);
 
-        $response = $this->actingAs($this->sender, 'api')
+        $response = $this->actingAs($this->sender)
             ->getJson('/api/messages/contacts');
 
         $response->assertStatus(200)

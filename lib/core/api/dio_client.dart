@@ -1,28 +1,27 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'api_endpoints.dart';
-import 'api_interceptors.dart';
+import '../config/api_config.dart';
 import '../storage/token_storage.dart';
+import 'api_interceptors.dart';
 
-final tokenStorageProvider = Provider((ref) => TokenStorage());
-
-final dioProvider = Provider((ref) {
+/// Provides a configured Dio instance with auth interceptors.
+/// Use ApiService for all HTTP calls in the live app — this client
+/// is kept for any future migration to Dio-based services.
+Dio createDioClient(TokenStorage tokenStorage) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: ApiEndpoints.baseUrl,
+      baseUrl: ApiConfig.currentBaseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
     ),
   );
 
-  final tokenStorage = ref.read(tokenStorageProvider);
-  dio.interceptors.add(ApiInterceptors(tokenStorage, ref));
-  
-  // Add logging interceptor for development
+  dio.interceptors.add(ApiInterceptors(tokenStorage));
+
+  // Add logging interceptor for development only
   dio.interceptors.add(LogInterceptor(
     requestBody: true,
     responseBody: true,
   ));
 
   return dio;
-});
+}

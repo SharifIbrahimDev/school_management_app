@@ -98,20 +98,22 @@ class AttendanceController extends Controller
         $sectionId = $request->section_id;
         $date = $request->date;
 
-        $totalStudents = \App\Models\Student::where('section_id', $sectionId)
+        $totalStudents = \App\Models\Student::whereHas('sections', function ($query) use ($sectionId) {
+                $query->where('sections.id', $sectionId);
+            })
             ->where('is_active', true)
             ->count();
 
         $presentCount = Attendance::where('date', $date)
-            ->whereHas('student', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('student.sections', function ($query) use ($sectionId) {
+                $query->where('sections.id', $sectionId);
             })
             ->where('status', 'present')
             ->count();
 
         $absentCount = Attendance::where('date', $date)
-            ->whereHas('student', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('student.sections', function ($query) use ($sectionId) {
+                $query->where('sections.id', $sectionId);
             })
             ->where('status', 'absent')
             ->count();

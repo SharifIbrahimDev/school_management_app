@@ -35,7 +35,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson('/api/notifications');
 
         $response->assertStatus(200)
@@ -52,7 +52,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson('/api/notifications?is_read=0');
 
         $response->assertStatus(200)
@@ -69,7 +69,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson('/api/notifications/unread-count');
 
         $response->assertStatus(200)
@@ -85,7 +85,7 @@ class NotificationFlowTest extends TestCase
             'message' => 'This is a test notification message.',
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson('/api/notifications', $payload);
 
         $response->assertStatus(201)
@@ -104,7 +104,7 @@ class NotificationFlowTest extends TestCase
             'message' => 'This is a broadcast message.',
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson('/api/notifications/broadcast', $payload);
 
         $response->assertStatus(201)
@@ -119,7 +119,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/notifications/{$notification->id}/read");
 
         $response->assertStatus(200);
@@ -136,7 +136,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson('/api/notifications/mark-all-read');
 
         $response->assertStatus(200)
@@ -153,7 +153,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->deleteJson("/api/notifications/{$notification->id}");
 
         $response->assertStatus(200);
@@ -170,7 +170,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->deleteJson('/api/notifications/read/all');
 
         $response->assertStatus(200)
@@ -186,7 +186,7 @@ class NotificationFlowTest extends TestCase
             'user_id' => $otherUser->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/notifications/{$notification->id}/read");
 
         $response->assertStatus(404);

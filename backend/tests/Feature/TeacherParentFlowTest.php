@@ -60,13 +60,13 @@ class TeacherParentFlowTest extends TestCase
             'teacher_id' => $teacher->id,
         ]);
 
-        $response = $this->actingAs($this->proprietor, 'api')->getJson("/api/schools/{$this->school->id}/users?role=teacher");
+        $response = $this->actingAs($this->proprietor)->getJson("/api/schools/{$this->school->id}/users?role=teacher");
 
         $response->assertStatus(200)
             ->assertJsonFragment(['full_name' => 'Teacher One']);
 
         // Verify teacher details include assignments
-        $teacherResponse = $this->actingAs($this->proprietor, 'api')->getJson("/api/schools/{$this->school->id}/users/{$teacher->id}");
+        $teacherResponse = $this->actingAs($this->proprietor)->getJson("/api/schools/{$this->school->id}/users/{$teacher->id}");
 
         $teacherResponse->assertStatus(200)
             ->assertJsonPath('data.classes.0.class_name', 'SS1 A')
@@ -95,13 +95,13 @@ class TeacherParentFlowTest extends TestCase
             'student_name' => 'Child One',
         ]);
 
-        $response = $this->actingAs($this->proprietor, 'api')->getJson("/api/schools/{$this->school->id}/users?role=parent");
+        $response = $this->actingAs($this->proprietor)->getJson("/api/schools/{$this->school->id}/users?role=parent");
 
         $response->assertStatus(200)
             ->assertJsonFragment(['full_name' => 'Parent One']);
 
         // Verify parent details include linked students
-        $parentResponse = $this->actingAs($this->proprietor, 'api')->getJson("/api/schools/{$this->school->id}/users/{$parent->id}");
+        $parentResponse = $this->actingAs($this->proprietor)->getJson("/api/schools/{$this->school->id}/users/{$parent->id}");
 
         $parentResponse->assertStatus(200)
             ->assertJsonPath('data.students.0.student_name', 'Child One');

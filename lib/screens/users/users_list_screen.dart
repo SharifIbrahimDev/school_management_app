@@ -38,7 +38,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadUsers();
+    _loadInitialData();
   }
 
   void _onScroll() {
@@ -55,8 +55,34 @@ class _UsersListScreenState extends State<UsersListScreen> {
     _scrollController.dispose();
     super.dispose();
   }
-
   static const int _pageLimit = 100;
+
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = Provider.of<AuthServiceApi>(context, listen: false);
+      final userMap = authService.currentUser;
+      if (userMap == null) throw Exception('User not logged in');
+      _currentUser = UserModel.fromMap(userMap);
+
+      if (_currentUser!.role == UserRole.proprietor) {
+        await _loadUsers();
+      } else {
+        throw Exception('Access denied');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Initialization error: $e';
+        });
+      }
+    }
+  }
 
   Future<void> _loadUsers({bool loadMore = false}) async {
     if (loadMore) {
@@ -349,11 +375,12 @@ class _UsersListScreenState extends State<UsersListScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => UserDetailsScreen(user: user)),
           );
+          _loadUsers();
         },
         child: Padding(
           padding: const EdgeInsets.all(16),

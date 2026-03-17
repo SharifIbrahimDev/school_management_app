@@ -26,6 +26,7 @@ import 'core/services/school_service_api.dart';
 import 'core/services/cache_service.dart';
 import 'core/utils/app_theme.dart';
 import 'core/providers/settings_provider.dart';
+import 'core/providers/global_filter_provider.dart';
 import 'core/utils/preferences_manager.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/auth/auth_wrapper.dart';
@@ -84,6 +85,7 @@ class SchoolApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationServiceApi()),
         ChangeNotifierProvider(create: (_) => SchoolServiceApi()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => GlobalFilterProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {

@@ -37,7 +37,7 @@ class UserManagementFlowTest extends TestCase
 
     public function test_can_list_users()
     {
-        $response = $this->actingAs($this->user, 'api')->getJson("/api/schools/{$this->school->id}/users");
+        $response = $this->actingAs($this->user)->getJson("/api/schools/{$this->school->id}/users");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -62,7 +62,7 @@ class UserManagementFlowTest extends TestCase
             'is_active' => true,
         ];
 
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/users", $userData);
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/users", $userData);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.full_name', 'New Staff')
@@ -83,7 +83,7 @@ class UserManagementFlowTest extends TestCase
             'role' => 'teacher',
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->putJson("/api/schools/{$this->school->id}/users/{$staff->id}", [
+        $response = $this->actingAs($this->user)->putJson("/api/schools/{$this->school->id}/users/{$staff->id}", [
             'full_name' => 'Updated Name',
             'role' => 'principal',
         ]);
@@ -100,7 +100,7 @@ class UserManagementFlowTest extends TestCase
             'role' => 'teacher',
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->deleteJson("/api/schools/{$this->school->id}/users/{$staff->id}");
+        $response = $this->actingAs($this->user)->deleteJson("/api/schools/{$this->school->id}/users/{$staff->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('users', ['id' => $staff->id]);
@@ -113,7 +113,7 @@ class UserManagementFlowTest extends TestCase
             'role' => 'teacher',
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/users/{$staff->id}/assign-sections", [
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/users/{$staff->id}/assign-sections", [
             'section_ids' => [$this->section->id],
         ]);
 

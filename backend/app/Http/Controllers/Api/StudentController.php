@@ -215,12 +215,19 @@ class StudentController extends Controller
         $sectionIds = $student->sections->pluck('id')->toArray();
 
         $summary = [
-            'total_paid' => $student->transactions()->where('transaction_type', 'income')->sum('amount'),
+            'total_paid' => (float)$student->transactions()
+                ->where('transaction_type', 'income')
+                ->where('status', 'approved')
+                ->sum('amount'),
             'total_fees' => 0, // Will be calculated from fees assigned to student's class
             'balance' => 0, // total_fees - total_paid
-            'payment_count' => $student->transactions()->where('transaction_type', 'income')->count(),
+            'payment_count' => $student->transactions()
+                ->where('transaction_type', 'income')
+                ->where('status', 'approved')
+                ->count(),
             'last_payment' => $student->transactions()
                 ->where('transaction_type', 'income')
+                ->where('status', 'approved')
                 ->orderBy('transaction_date', 'desc')
                 ->first(),
         ];

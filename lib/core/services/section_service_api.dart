@@ -35,13 +35,14 @@ class SectionServiceApi extends ChangeNotifier {
   }
   
   // Get section by ID
-  Future<Map<String, dynamic>?> getSection(int id) async {
+  Future<Map<String, dynamic>?> getSection(int id, {bool forceRefresh = false}) async {
     try {
       final schoolId = await StorageHelper.getSchoolId();
       if (schoolId == null) throw Exception('School ID not found');
       
       final response = await _apiService.get(
         ApiConfig.section(schoolId, id),
+        forceRefresh: forceRefresh,
       );
       
       if (response['success'] == true) {

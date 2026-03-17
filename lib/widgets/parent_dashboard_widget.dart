@@ -114,7 +114,15 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
                    final fees = await feeService.getFees(studentId: sId);
                    double studentTotal = 0.0;
                    for (var fee in fees) {
-                      final balance = (fee['balance'] ?? fee['amount'] ?? 0).toDouble();
+                      double balance = 0.0;
+                      final rawBalance = fee['balance'] ?? fee['amount'];
+                      if (rawBalance != null) {
+                        if (rawBalance is num) {
+                          balance = rawBalance.toDouble();
+                        } else if (rawBalance is String) {
+                          balance = double.tryParse(rawBalance) ?? 0.0;
+                        }
+                      }
                       if (balance > 0) studentTotal += balance;
                    }
                    balances[student.id] = studentTotal;
@@ -365,6 +373,8 @@ class _ParentDashboardWidgetState extends State<ParentDashboardWidget> {
           const CardSkeletonLoader(),
           const SizedBox(height: 32),
           ResponsiveGridView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             mobileColumns: 1,
             tabletColumns: 2,
             desktopColumns: 3,

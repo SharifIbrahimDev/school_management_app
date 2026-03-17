@@ -24,11 +24,15 @@ class Transaction extends Model
         'reference_number',
         'transaction_date',
         'recorded_by',
+        'fee_id',
+        'status',
+        'proof_url',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'transaction_date' => 'date',
+        'status' => 'string',
     ];
 
     /**
@@ -69,6 +73,14 @@ class Transaction extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    /**
+     * Get the fee for the transaction.
+     */
+    public function fee(): BelongsTo
+    {
+        return $this->belongsTo(Fee::class);
     }
 
     /**

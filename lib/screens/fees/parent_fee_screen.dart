@@ -11,6 +11,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_snackbar.dart';
+import 'submit_manual_payment_screen.dart';
 
 class ParentFeeScreen extends StatefulWidget {
   final int studentId;
@@ -160,15 +161,30 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
                   style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => _initiatePayment(fee),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    minimumSize: const Size(80, 32),
-                  ),
-                  child: const Text('Pay Now'),
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => _submitManualPayment(fee),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: const BorderSide(color: AppTheme.primaryColor),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(60, 32),
+                      ),
+                      child: const Text('Manual Pay', style: TextStyle(fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => _initiatePayment(fee),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(60, 32),
+                      ),
+                      child: const Text('Pay Online', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -259,5 +275,21 @@ class _ParentFeeScreenState extends State<ParentFeeScreen> with SingleTickerProv
         _loadData();
       },
     );
+  }
+
+  void _submitManualPayment(Map<String, dynamic> fee) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SubmitManualPaymentScreen(
+          fee: fee,
+          studentId: widget.studentId,
+        ),
+      ),
+    ).then((value) {
+      if (value == true) {
+        _loadData();
+      }
+    });
   }
 }

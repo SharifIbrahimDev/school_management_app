@@ -37,13 +37,14 @@ class ClassServiceApi extends ChangeNotifier {
   }
   
   // Get class by ID
-  Future<Map<String, dynamic>?> getClass(int id) async {
+  Future<Map<String, dynamic>?> getClass(int id, {bool forceRefresh = false}) async {
     try {
       final schoolId = await StorageHelper.getSchoolId();
       if (schoolId == null) throw Exception('School ID not found');
       
       final response = await _apiService.get(
         ApiConfig.classItem(schoolId, id),
+        forceRefresh: forceRefresh,
       );
       
       if (response['success'] == true) {

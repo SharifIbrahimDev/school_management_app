@@ -90,7 +90,7 @@ class FeeFlowTest extends TestCase
 
     public function test_can_create_fee_structure()
     {
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/fees", [
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/fees", [
             'fee_name' => 'Tuition Fee 1st Term',
             'amount' => 50000,
             'fee_scope' => 'class',
@@ -133,7 +133,7 @@ class FeeFlowTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->postJson('/api/payments/initialize', [
+        $response = $this->actingAs($this->user)->postJson('/api/payments/initialize', [
             'email' => 'tunde@example.com',
             'amount' => 10000,
             'student_id' => $this->student->id,
@@ -194,7 +194,7 @@ class FeeFlowTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->postJson('/api/payments/verify', [
+        $response = $this->actingAs($this->user)->postJson('/api/payments/verify', [
             'reference' => $reference,
         ]);
 

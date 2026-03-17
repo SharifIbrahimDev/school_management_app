@@ -37,7 +37,6 @@ dependencies:
   cached_network_image: ^3.4.1
 
   # State Management
-  flutter_riverpod: ^2.6.1
   provider: ^6.1.5
 
   # Utilities

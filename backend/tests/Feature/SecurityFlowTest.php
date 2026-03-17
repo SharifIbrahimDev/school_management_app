@@ -39,7 +39,7 @@ class SecurityFlowTest extends TestCase
 
     public function test_can_access_own_school_routes()
     {
-        $response = $this->actingAs($this->userSchool1, 'api')
+        $response = $this->actingAs($this->userSchool1)
             ->getJson("/api/schools/{$this->school1->id}/students");
 
         $response->assertStatus(200);
@@ -48,7 +48,7 @@ class SecurityFlowTest extends TestCase
     public function test_cannot_access_other_school_routes()
     {
         // User from School 1 tries to access School 2's students
-        $response = $this->actingAs($this->userSchool1, 'api')
+        $response = $this->actingAs($this->userSchool1)
             ->getJson("/api/schools/{$this->school2->id}/students");
 
         $response->assertStatus(403)
@@ -60,7 +60,7 @@ class SecurityFlowTest extends TestCase
 
     public function test_middleware_protection_on_users_route()
     {
-        $response = $this->actingAs($this->userSchool1, 'api')
+        $response = $this->actingAs($this->userSchool1)
             ->getJson("/api/schools/{$this->school2->id}/users");
 
         $response->assertStatus(403);
@@ -68,7 +68,7 @@ class SecurityFlowTest extends TestCase
 
     public function test_middleware_protection_on_sections_route()
     {
-        $response = $this->actingAs($this->userSchool1, 'api')
+        $response = $this->actingAs($this->userSchool1)
             ->getJson("/api/schools/{$this->school2->id}/sections");
 
         $response->assertStatus(403);

@@ -81,7 +81,7 @@ class TransactionFlowTest extends TestCase
 
     public function test_can_create_income_transaction()
     {
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/transactions", [
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/transactions", [
             'section_id' => $this->section->id,
             'session_id' => $this->session->id,
             'term_id' => $this->term->id,
@@ -106,7 +106,7 @@ class TransactionFlowTest extends TestCase
 
     public function test_can_create_expense_transaction()
     {
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/transactions", [
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/transactions", [
             'section_id' => $this->section->id,
             'session_id' => $this->session->id,
             'term_id' => $this->term->id,
@@ -151,7 +151,7 @@ class TransactionFlowTest extends TestCase
             'recorded_by' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->getJson("/api/schools/{$this->school->id}/transactions-dashboard-stats");
+        $response = $this->actingAs($this->user)->getJson("/api/schools/{$this->school->id}/transactions-dashboard-stats");
 
         $response->assertStatus(200)
             ->assertJsonFragment(['total_income' => 10000, 'total_expenses' => 4000, 'balance' => 6000]);
@@ -169,7 +169,7 @@ class TransactionFlowTest extends TestCase
             'recorded_by' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->getJson("/api/schools/{$this->school->id}/transactions-report?start_date=".now()->subDay()->toDateString().'&end_date='.now()->addDay()->toDateString());
+        $response = $this->actingAs($this->user)->getJson("/api/schools/{$this->school->id}/transactions-report?start_date=".now()->subDay()->toDateString().'&end_date='.now()->addDay()->toDateString());
 
         $response->assertStatus(200)
             ->assertJsonStructure([

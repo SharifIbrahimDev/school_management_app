@@ -10,6 +10,8 @@ import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../core/models/section_model.dart';
+import '../../core/services/section_service_api.dart';
 
 class AddUserScreen extends StatefulWidget {
   const AddUserScreen({super.key});
@@ -26,7 +28,50 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   UserRole _selectedRole = UserRole.principal;
+  List<SectionModel> _assignedSections = [];
+  String? _selectedSectionId;
   bool _isLoading = false;
+  bool _isInitLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    try {
+      final authService = Provider.of<AuthServiceApi>(context, listen: false);
+      final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
+      
+      final currentUserMap = authService.currentUser;
+      if (currentUserMap == null) return;
+      final currentUser = UserModel.fromMap(currentUserMap);
+      
+      if (currentUser.role != UserRole.proprietor) {
+        if (mounted) {
+          setState(() {
+            _isInitLoading = false;
+          });
+          AppSnackbar.showError(context, message: 'Access denied');
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      final sectionsData = await sectionService.getSections(isActive: true);
+      _assignedSections = sectionsData.map((d) => SectionModel.fromMap(d)).toList();
+
+      if (_assignedSections.isNotEmpty) {
+        _selectedSectionId = _assignedSections.first.id;
+      }
+
+      if (mounted) setState(() => _isInitLoading = false);
+    } catch (e) {
+      debugPrint('Error loading sections for user creation: $e');
+      if (mounted) setState(() => _isInitLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -65,6 +110,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
         phoneNumber: _phoneController.text.trim(),
         address: _addressController.text.trim(),
         role: _selectedRole.toString().split('.').last,
+        sectionId: _selectedSectionId != null ? int.tryParse(_selectedSectionId!) : null,
       );
 
       if (mounted) {
@@ -109,7 +155,9 @@ class _AddUserScreenState extends State<AddUserScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: _isInitLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Form(
               key: _formKey,
@@ -193,6 +241,38 @@ class _AddUserScreenState extends State<AddUserScreen> {
                           onChanged: (value) => setState(() => _selectedRole = value!),
                           validator: (value) => value == null ? 'Please select a role' : null,
                         ),
+                        if (_assignedSections.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            value: _selectedSectionId,
+                            dropdownColor: theme.colorScheme.surface,
+                            decoration: InputDecoration(
+                              labelText: 'Section Assignment',
+                              prefixIcon: const Icon(Icons.layers, color: AppTheme.primaryColor),
+                              filled: true,
+                              fillColor: AppTheme.primaryColor.withValues(alpha: 0.05),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                              ),
+                            ),
+                            items: _assignedSections
+                                .map((s) => DropdownMenuItem(
+                                      value: s.id,
+                                      child: Text(
+                                        s.sectionName,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: (value) => setState(() => _selectedSectionId = value),
+                            validator: (value) => value == null ? 'Please select a section' : null,
+                          ),
+                        ],
                       ],
                     ),
                   ),

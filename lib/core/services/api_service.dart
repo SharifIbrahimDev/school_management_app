@@ -6,12 +6,30 @@ import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import '../config/api_config.dart';
 import '../utils/storage_helper.dart';
-import 'package:flutter/foundation.dart';
+import 'persistent_storage_service.dart';
+import 'storage_service.dart';
 
 class ApiService {
-  static final ApiService _instance = ApiService._internal();
-  factory ApiService() => _instance;
-  ApiService._internal();
+  static ApiService? _instance;
+  final http.Client _client;
+  final Future<String?> Function()? _tokenResolver;
+  final IStorageService _storage;
+  
+  factory ApiService({http.Client? client, Future<String?> Function()? tokenResolver, IStorageService? storage}) {
+    _instance ??= ApiService._internal(
+      client ?? http.Client(),
+      tokenResolver,
+      storage ?? PersistentStorageService(),
+    );
+    return _instance!;
+  }
+
+  @visibleForTesting
+  static void reset() {
+    _instance = null;
+  }
+  
+  ApiService._internal(this._client, this._tokenResolver, this._storage);
 
   String? _token;
   Box? _cacheBox;
@@ -25,20 +43,21 @@ class ApiService {
 
   // Get stored token
   Future<String?> getToken() async {
-    _token ??= await StorageHelper.getToken();
+    if (_tokenResolver != null) return await _tokenResolver!();
+    _token ??= await _storage.getToken();
     return _token;
   }
   
   // Set token
   Future<void> setToken(String token) async {
     _token = token;
-    await StorageHelper.saveToken(token);
+    await _storage.saveToken(token);
   }
   
   // Clear token
   Future<void> clearToken() async {
     _token = null;
-    await StorageHelper.clearToken();
+    await _storage.clearToken();
   }
   
   // GET request with Caching
@@ -47,53 +66,42 @@ class ApiService {
     Map<String, String>? queryParameters,
     bool requiresAuth = true,
     bool forceRefresh = false,
-    bool cacheEnabled = true, // Default to true for offline support
-    Duration? cacheDuration, // Optional custom cache duration
+    bool cacheEnabled = true,
+    Duration? cacheDuration,
   }) async {
     final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint')
         .replace(queryParameters: queryParameters);
     final cacheKey = uri.toString();
 
-    // 1. Try to return from cache if not forcing refresh
     if (!forceRefresh && cacheEnabled) {
       try {
         final box = await _box;
         if (box.containsKey(cacheKey)) {
           final cachedData = box.get(cacheKey);
           final timestamp = cachedData['timestamp'] as int;
-          // Using jsonDecode(jsonEncode()) to deeply cast all nested Map<dynamic, dynamic> to Map<String, dynamic>
           final content = jsonDecode(jsonEncode(cachedData['content'])) as Map<String, dynamic>;
           
-          // Check if cache is valid (default 1 hour if not specified)
           final duration = cacheDuration ?? const Duration(hours: 1);
           final isExpired = DateTime.now().millisecondsSinceEpoch - timestamp > duration.inMilliseconds;
 
-          if (!isExpired) {
-            return content;
-          } else {
-             // Cache is expired, but we might keep it as fallback if network fails
-             // Proceed to fetch
-          }
+          if (!isExpired) return content;
         }
       } catch (e) {
-        // Silently fail on cache read and proceed to network
-        print('Cache read error: $e');
+        debugPrint('Cache read error: $e');
       }
     }
 
-    // 2. Network Request
     try {
       final headers = requiresAuth
           ? ApiConfig.authHeaders(await getToken() ?? '')
           : ApiConfig.headers;
       
-      final response = await http
+      final response = await _client
           .get(uri, headers: headers)
           .timeout(ApiConfig.timeout);
       
       final data = _handleResponse(response);
 
-      // 3. Save to cache on success
       if (cacheEnabled) {
         try {
           final box = await _box;
@@ -102,24 +110,21 @@ class ApiService {
             'content': data,
           });
         } catch (e) {
-          print('Cache write error: $e');
+          debugPrint('Cache write error: $e');
         }
       }
 
       return data;
     } catch (e) {
-      // 4. On failure, try to return stale cache if available
       if (cacheEnabled) {
         try {
           final box = await _box;
           if (box.containsKey(cacheKey)) {
              final cachedData = box.get(cacheKey);
-             // Using jsonDecode(jsonEncode()) for deep casting
              return jsonDecode(jsonEncode(cachedData['content'])) as Map<String, dynamic>;
           }
         } catch (_) {}
       }
-      
       throw _handleError(e);
     }
   }
@@ -129,20 +134,18 @@ class ApiService {
     String endpoint, {
     Map<String, dynamic>? body,
     bool requiresAuth = true,
+    bool shouldInvalidateCache = true,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint');
+      if (shouldInvalidateCache) await invalidateCache(endpoint);
       
+      final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint');
       final headers = requiresAuth
           ? ApiConfig.authHeaders(await getToken() ?? '')
           : ApiConfig.headers;
       
-      final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: body != null ? jsonEncode(body) : null,
-          )
+      final response = await _client
+          .post(uri, headers: headers, body: body != null ? jsonEncode(body) : null)
           .timeout(ApiConfig.timeout);
       
       return _handleResponse(response);
@@ -156,20 +159,18 @@ class ApiService {
     String endpoint, {
     Map<String, dynamic>? body,
     bool requiresAuth = true,
+    bool shouldInvalidateCache = true,
   }) async {
     try {
+      if (shouldInvalidateCache) await invalidateCache(endpoint);
+
       final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint');
-      
       final headers = requiresAuth
           ? ApiConfig.authHeaders(await getToken() ?? '')
           : ApiConfig.headers;
       
-      final response = await http
-          .put(
-            uri,
-            headers: headers,
-            body: body != null ? jsonEncode(body) : null,
-          )
+      final response = await _client
+          .put(uri, headers: headers, body: body != null ? jsonEncode(body) : null)
           .timeout(ApiConfig.timeout);
       
       return _handleResponse(response);
@@ -182,15 +183,17 @@ class ApiService {
   Future<Map<String, dynamic>> delete(
     String endpoint, {
     bool requiresAuth = true,
+    bool shouldInvalidateCache = true,
   }) async {
     try {
+      if (shouldInvalidateCache) await invalidateCache(endpoint);
+
       final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint');
-      
       final headers = requiresAuth
           ? ApiConfig.authHeaders(await getToken() ?? '')
           : ApiConfig.headers;
       
-      final response = await http
+      final response = await _client
           .delete(uri, headers: headers)
           .timeout(ApiConfig.timeout);
       
@@ -206,8 +209,11 @@ class ApiService {
     Map<String, String>? fields,
     List<http.MultipartFile>? files,
     bool requiresAuth = true,
+    bool shouldInvalidateCache = true,
   }) async {
     try {
+      if (shouldInvalidateCache) await invalidateCache(endpoint);
+
       final uri = Uri.parse('${ApiConfig.currentBaseUrl}$endpoint');
       final request = http.MultipartRequest('POST', uri);
       
@@ -228,6 +234,33 @@ class ApiService {
       throw _handleError(e);
     }
   }
+
+  // Cache Management
+  Future<void> clearCache() async {
+    final box = await _box;
+    await box.clear();
+  }
+
+  Future<void> invalidateCache(String endpoint) async {
+    try {
+      final box = await _box;
+      final baseUrl = ApiConfig.currentBaseUrl;
+      final fullEndpoint = '$baseUrl$endpoint';
+      
+      // Remove specific endpoint and any children (e.g., /users should clear /users/1)
+      final keysToRemove = box.keys.where((key) {
+        final k = key.toString();
+        return k.contains(fullEndpoint);
+      }).toList();
+
+      for (var key in keysToRemove) {
+        await box.delete(key);
+      }
+    } catch (e) {
+      debugPrint('Cache invalidation error: $e');
+    }
+  }
+
   
   // Handle response
   Map<String, dynamic> _handleResponse(http.Response response) {

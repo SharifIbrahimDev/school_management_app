@@ -1,7 +1,7 @@
 // core/enums/fee_scope.dart
 enum FeeScope { school, section, classScope, student, parent }
 
-enum FeeStatus { pending, paid, overdue }
+enum FeeStatus { pending, paid, overdue, partial }
 
 enum TransactionType { credit, debit }
 

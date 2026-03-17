@@ -180,8 +180,9 @@ class PaymentController extends Controller
                                 'category' => 'Tuition Fee',
                                 'description' => "Online payment for {$fee->fee_name}",
                                 'reference_number' => $payment->reference,
+                                'fee_id' => $payment->fee_id,
                                 'transaction_date' => now(),
-                                'recorded_by' => null, // Online payment has no specific bursar
+                                'recorded_by' => auth()->id() ?? \App\Models\User::where('school_id', $fee->school_id)->where('role', 'proprietor')->value('id') ?? 1,
                             ]);
                         }
                     }

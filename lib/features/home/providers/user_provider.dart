@@ -1,8 +1,22 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../auth/models/user_model.dart';
-import '../../auth/providers/auth_provider.dart';
+import 'package:flutter/foundation.dart';
+import '../../../core/services/auth_service_api.dart';
+import '../../../core/models/user_model.dart';
 
-final userProvider = FutureProvider<UserModel>((ref) async {
-  final repository = ref.watch(authRepositoryProvider);
-  return await repository.getMe();
-});
+/// Provides the current logged-in user model, mirroring AuthServiceApi.currentUserModel.
+class UserProvider extends ChangeNotifier {
+  final AuthServiceApi _authService;
+
+  UserProvider(this._authService) {
+    _authService.addListener(notifyListeners);
+  }
+
+  UserModel? get currentUser => _authService.currentUserModel;
+
+  Future<void> refresh() => _authService.refreshUser();
+
+  @override
+  void dispose() {
+    _authService.removeListener(notifyListeners);
+    super.dispose();
+  }
+}

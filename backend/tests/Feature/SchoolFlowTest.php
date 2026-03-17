@@ -33,7 +33,7 @@ class SchoolFlowTest extends TestCase
         School::factory()->count(3)->create(['is_active' => true]);
         School::factory()->create(['is_active' => false]); // Inactive, shouldn't appear
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson('/api/schools');
 
         $response->assertStatus(200)
@@ -54,7 +54,7 @@ class SchoolFlowTest extends TestCase
             'email' => 'info@newtestschool.com',
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson('/api/schools', $payload);
 
         $response->assertStatus(201)
@@ -76,7 +76,7 @@ class SchoolFlowTest extends TestCase
             // Missing required 'name'
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson('/api/schools', $payload);
 
         $response->assertStatus(422)
@@ -89,7 +89,7 @@ class SchoolFlowTest extends TestCase
         Section::factory()->count(2)->create(['school_id' => $school->id]);
         User::factory()->count(3)->create(['school_id' => $school->id]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$school->id}");
 
         $response->assertStatus(200)
@@ -108,7 +108,7 @@ class SchoolFlowTest extends TestCase
             'phone' => '+234 900 000 0000',
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->putJson("/api/schools/{$school->id}", $payload);
 
         $response->assertStatus(200)
@@ -128,7 +128,7 @@ class SchoolFlowTest extends TestCase
     {
         $school = School::factory()->create(['is_active' => true]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->putJson("/api/schools/{$school->id}", ['is_active' => false]);
 
         $response->assertStatus(200);
@@ -143,7 +143,7 @@ class SchoolFlowTest extends TestCase
     {
         $school = School::factory()->create();
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->deleteJson("/api/schools/{$school->id}");
 
         $response->assertStatus(200)
@@ -168,7 +168,7 @@ class SchoolFlowTest extends TestCase
         ClassModel::factory()->count(4)->create(['school_id' => $school->id, 'section_id' => $section->id]);
         Student::factory()->count(10)->create(['school_id' => $school->id]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$school->id}/statistics");
 
         $response->assertStatus(200)
@@ -192,7 +192,7 @@ class SchoolFlowTest extends TestCase
 
     public function test_school_not_found_returns_404()
     {
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson('/api/schools/99999');
 
         $response->assertStatus(404);

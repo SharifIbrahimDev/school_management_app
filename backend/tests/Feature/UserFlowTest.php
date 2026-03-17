@@ -36,7 +36,7 @@ class UserFlowTest extends TestCase
         $otherSchool = School::factory()->create();
         User::factory()->count(3)->create(['school_id' => $otherSchool->id]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/users");
 
         $response->assertStatus(200)
@@ -59,7 +59,7 @@ class UserFlowTest extends TestCase
             'role' => 'parent',
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/users?role=teacher");
 
         $response->assertStatus(200);
@@ -84,7 +84,7 @@ class UserFlowTest extends TestCase
             'is_active' => false,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/users?is_active=1");
 
         $response->assertStatus(200);
@@ -105,7 +105,7 @@ class UserFlowTest extends TestCase
             'address' => '123 Teacher Street',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users", $payload);
 
         $response->assertStatus(201)
@@ -133,7 +133,7 @@ class UserFlowTest extends TestCase
             // Missing required fields: email, password, role
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users", $payload);
 
         $response->assertStatus(422)
@@ -154,7 +154,7 @@ class UserFlowTest extends TestCase
             'role' => 'teacher',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users", $payload);
 
         $response->assertStatus(422)
@@ -170,7 +170,7 @@ class UserFlowTest extends TestCase
             'role' => 'invalid_role', // Invalid
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users", $payload);
 
         $response->assertStatus(422)
@@ -184,7 +184,7 @@ class UserFlowTest extends TestCase
             'role' => 'teacher',
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/users/{$user->id}");
 
         $response->assertStatus(200)
@@ -207,7 +207,7 @@ class UserFlowTest extends TestCase
             'phone_number' => '+234 900 000 0000',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/users/{$user->id}", $payload);
 
         $response->assertStatus(200)
@@ -233,7 +233,7 @@ class UserFlowTest extends TestCase
             'password' => 'NewSecurePassword456',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/users/{$user->id}", $payload);
 
         $response->assertStatus(200);
@@ -249,7 +249,7 @@ class UserFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/users/{$user->id}", [
                 'is_active' => false,
             ]);
@@ -266,7 +266,7 @@ class UserFlowTest extends TestCase
     {
         $user = User::factory()->create(['school_id' => $this->school->id]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->deleteJson("/api/schools/{$this->school->id}/users/{$user->id}");
 
         $response->assertStatus(200)
@@ -291,7 +291,7 @@ class UserFlowTest extends TestCase
 
         $sectionIds = $sections->pluck('id')->toArray();
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users/{$user->id}/assign-sections", [
                 'section_ids' => $sectionIds,
             ]);
@@ -315,7 +315,7 @@ class UserFlowTest extends TestCase
 
         $newSections = Section::factory()->count(3)->create(['school_id' => $this->school->id]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/users/{$user->id}/assign-sections", [
                 'section_ids' => $newSections->pluck('id')->toArray(),
             ]);
@@ -331,7 +331,7 @@ class UserFlowTest extends TestCase
         $otherSchool = School::factory()->create();
         $otherUser = User::factory()->create(['school_id' => $otherSchool->id]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/users/{$otherUser->id}");
 
         $response->assertStatus(404);

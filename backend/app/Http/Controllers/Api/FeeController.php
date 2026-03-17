@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Fee;
+use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class FeeController extends Controller
@@ -66,6 +68,27 @@ class FeeController extends Controller
             })
             ->orderBy('created_at', 'desc')
             ->paginate(100);
+
+        if ($request->has('student_id')) {
+            $studentId = $request->student_id;
+            $feeIds = collect($fees->items())->pluck('id')->toArray();
+            
+            $payments = Transaction::where('student_id', $studentId)
+                ->whereIn('fee_id', $feeIds)
+                ->where('transaction_type', 'income')
+                ->where('status', 'approved')
+                ->select('fee_id', DB::raw('SUM(amount) as paid_amount'))
+                ->groupBy('fee_id')
+                ->get()
+                ->keyBy('fee_id');
+
+            foreach ($fees->items() as $fee) {
+                $paid = isset($payments[$fee->id]) ? (float)$payments[$fee->id]->paid_amount : 0.0;
+                $fee->paid_amount = $paid;
+                $fee->balance = (float)$fee->amount - $paid;
+                $fee->status = $fee->balance <= 0 ? 'paid' : ($paid > 0 ? 'partial' : 'pending');
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -143,6 +166,18 @@ class FeeController extends Controller
             ->with(['section', 'academicSession', 'term', 'classModel'])
             ->findOrFail($id);
 
+        if ($request->has('student_id')) {
+            $paid = Transaction::where('student_id', $request->student_id)
+                ->where('fee_id', $id)
+                ->where('transaction_type', 'income')
+                ->where('status', 'approved')
+                ->sum('amount');
+            
+            $fee->paid_amount = (float)$paid;
+            $fee->balance = (float)$fee->amount - (float)$paid;
+            $fee->status = $fee->balance <= 0 ? 'paid' : ($paid > 0 ? 'partial' : 'pending');
+        }
+
         return response()->json([
             'success' => true,
             'data' => $fee,
@@ -199,31 +234,92 @@ class FeeController extends Controller
     }
 
     /**
-     * Get fee summary by scope
+     * Get fee summary by scope with actual expected totals
      */
     public function summary(Request $request, string $schoolId): JsonResponse
     {
+        $sectionId = $request->section_id;
+        $sessionId = $request->session_id;
+        $termId = $request->term_id;
+
         $query = Fee::where('school_id', $schoolId)
             ->where('is_active', true);
 
-        if ($request->has('section_id')) {
-            $query->where('section_id', $request->section_id);
+        if ($sectionId) {
+            $query->where('section_id', $sectionId);
+        }
+        if ($sessionId) {
+            $query->where('session_id', $sessionId);
+        }
+        if ($termId) {
+            $query->where('term_id', $termId);
         }
 
-        if ($request->has('session_id')) {
-            $query->where('session_id', $request->session_id);
+        $fees = $query->get();
+        $totalExpected = 0;
+
+        foreach ($fees as $fee) {
+            $studentsCount = 0;
+            if ($fee->fee_scope === 'school') {
+                $studentsCount = \App\Models\Student::where('school_id', $schoolId)
+                    ->where('is_active', true)
+                    ->when($sectionId, function($q) use ($sectionId) {
+                        return $q->whereHas('sections', function($sq) use ($sectionId) {
+                            $sq->where('sections.id', $sectionId);
+                        });
+                    })->count();
+            } elseif ($fee->fee_scope === 'section') {
+                $studentsCount = \App\Models\Student::whereHas('sections', function($q) use ($fee) {
+                        $q->where('sections.id', $fee->section_id);
+                    })
+                    ->where('is_active', true)
+                    ->count();
+            } elseif ($fee->fee_scope === 'class') {
+                $studentsCount = \App\Models\Student::where('class_id', $fee->class_id)
+                    ->where('is_active', true)
+                    ->count();
+            } elseif ($fee->fee_scope === 'student') {
+                $studentsCount = 1;
+            }
+            $totalExpected += ($fee->amount * $studentsCount);
         }
 
-        if ($request->has('term_id')) {
-            $query->where('term_id', $request->term_id);
+        // Calculate collected for these specific fees
+        $feeIds = $fees->pluck('id')->toArray();
+        $totalCollected = \App\Models\Transaction::where('school_id', $schoolId)
+            ->where('transaction_type', 'income')
+            ->where('status', 'approved')
+            ->where(function ($q) use ($feeIds) {
+                $q->whereIn('fee_id', $feeIds)
+                  ->orWhere(function ($sq) {
+                      $sq->whereNull('fee_id')
+                         ->where('category', 'like', '%Fee%');
+                  });
+            });
+
+        if ($sectionId) {
+            $totalCollected->where('section_id', $sectionId);
         }
+        if ($sessionId) {
+            $totalCollected->where('session_id', $sessionId);
+        }
+        if ($termId) {
+            $totalCollected->where('term_id', $termId);
+        }
+
+        $totalCollected = $totalCollected->sum('amount');
 
         $summary = [
-            'total_fees' => $query->sum('amount'),
-            'fees_by_scope' => $query->selectRaw('fee_scope, COUNT(*) as count, SUM(amount) as total')
-                ->groupBy('fee_scope')
-                ->get(),
-            'fees_count' => $query->count(),
+            'total_amount' => (float)$totalExpected,
+            'total_balance' => (float)max(0, $totalExpected - $totalCollected),
+            'total_collected' => (float)$totalCollected,
+            'fees_count' => $fees->count(),
+            'fees_by_scope' => $fees->groupBy('fee_scope')->map(function($group) {
+                return [
+                    'count' => $group->count(),
+                    'total_rates' => $group->sum('amount'),
+                ];
+            }),
         ];
 
         return response()->json([

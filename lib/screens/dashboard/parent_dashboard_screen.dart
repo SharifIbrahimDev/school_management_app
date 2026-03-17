@@ -3,8 +3,9 @@ import '../../core/utils/app_theme.dart';
 import '../../widgets/parent_dashboard_widget.dart';
 import '../../widgets/notification_badge.dart';
 import '../../widgets/custom_app_bar.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/auth_service_api.dart';
 import '../../widgets/custom_drawer.dart';
-
 class ParentDashboardScreen extends StatefulWidget {
   final String parentId;
   final String schoolId;
@@ -23,10 +24,18 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
+      appBar: CustomAppBar(
         title: 'Parent Dashboard',
         actions: [
-          NotificationBadge(),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.blueGrey),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final authService = Provider.of<AuthServiceApi>(context, listen: false);
+              await authService.logout();
+            },
+          ),
+          const NotificationBadge(),
         ],
       ),
       drawer: const CustomDrawer(),

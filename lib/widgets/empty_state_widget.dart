@@ -29,11 +29,13 @@ class EmptyStateWidget extends StatelessWidget {
     final theme = Theme.of(context);
     
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Icon with subtle animation
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
@@ -122,7 +124,8 @@ class EmptyStateWidget extends StatelessWidget {
                   ],
                 ],
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

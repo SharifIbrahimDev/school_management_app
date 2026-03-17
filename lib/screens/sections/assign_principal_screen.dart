@@ -55,6 +55,7 @@ class _AssignPrincipalScreenState extends State<AssignPrincipalScreen> {
       if (isAssigned) {
         currentIds.remove(principalId);
       } else {
+        currentIds.clear();
         currentIds.add(principalId);
       }
 

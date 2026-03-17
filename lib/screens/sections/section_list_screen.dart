@@ -53,7 +53,12 @@ class _SectionListScreenState extends State<SectionListScreen> {
       if (_currentUser!.role == UserRole.proprietor) {
         _sections = allSections;
       } else {
-        _sections = allSections.where((s) => _currentUser!.assignedSections.contains(s.id)).toList();
+        _sections = allSections.where((s) {
+          final isAssignedAsPrincipal = s.assignedPrincipalIds.contains(_currentUser!.id);
+          final isAssignedAsBursar = s.assignedBursarIds.contains(_currentUser!.id);
+          final isInSectionList = _currentUser!.assignedSections.contains(s.id);
+          return isAssignedAsPrincipal || isAssignedAsBursar || isInSectionList;
+        }).toList();
       }
 
       if (mounted) {

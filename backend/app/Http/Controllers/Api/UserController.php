@@ -39,6 +39,13 @@ class UserController extends Controller
      */
     public function store(Request $request, string $schoolId): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can create users.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -97,6 +104,13 @@ class UserController extends Controller
      */
     public function update(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can update users.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'full_name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,'.$id,
@@ -133,8 +147,15 @@ class UserController extends Controller
     /**
      * Remove the specified user
      */
-    public function destroy(string $schoolId, string $id): JsonResponse
+    public function destroy(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can delete users.',
+            ], 403);
+        }
+
         $user = User::where('school_id', $schoolId)->findOrFail($id);
         $user->delete();
 
@@ -149,6 +170,13 @@ class UserController extends Controller
      */
     public function assignSections(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can assign sections to users.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'section_ids' => 'required|array',
             'section_ids.*' => 'exists:sections,id',

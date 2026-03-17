@@ -1,69 +1,41 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
+import '../services/storage_service.dart';
+import '../services/persistent_storage_service.dart';
 
 class StorageHelper {
-  static const _secureStorage = FlutterSecureStorage();
-  
-  static const String _tokenKey = 'auth_token';
-  static const String _userKey = 'user_data';
-  static const String _schoolIdKey = 'school_id';
+  static final IStorageService _service = PersistentStorageService();
+
+  // ==============================
+  // Basic Auth methods
+  // ==============================
+
+  static Future<void> saveToken(String token) => _service.saveToken(token);
+  static Future<String?> getToken() => _service.getToken();
+  static Future<void> clearToken() => _service.clearToken();
+
+  static Future<void> saveUser(Map<String, dynamic> user) =>
+      _service.saveUser(user);
+
+  static Future<Map<String, dynamic>?> getUser() => _service.getUser();
+
+  static Future<void> clearUser() => _service.clearUser();
+
+  static Future<void> saveSchoolId(int schoolId) =>
+      _service.saveSchoolId(schoolId);
+
+  static Future<int?> getSchoolId() => _service.getSchoolId();
+
+  static Future<void> clearSchoolId() => _service.clearSchoolId();
+
+  static Future<void> clearAll() => _service.clearAll();
+
+  // ==============================
+  // Biometric / Remember methods
+  // ==============================
+
   static const String _biometricEnabledKey = 'biometric_enabled';
   static const String _rememberMeKey = 'remember_me';
-  static const String _savedEmailKey = 'saved_email';
-  static const String _savedPasswordKey = 'saved_password';
-  
-  // Save authentication token securely
-  static Future<void> saveToken(String token) async {
-    await _secureStorage.write(key: _tokenKey, value: token);
-  }
-  
-  // Get authentication token securely
-  static Future<String?> getToken() async {
-    return await _secureStorage.read(key: _tokenKey);
-  }
-  
-  // Clear authentication token
-  static Future<void> clearToken() async {
-    await _secureStorage.delete(key: _tokenKey);
-  }
-  
-  // Save user data securely
-  static Future<void> saveUser(Map<String, dynamic> user) async {
-    await _secureStorage.write(key: _userKey, value: jsonEncode(user));
-  }
-  
-  // Get user data securely
-  static Future<Map<String, dynamic>?> getUser() async {
-    final userJson = await _secureStorage.read(key: _userKey);
-    if (userJson != null) {
-      return jsonDecode(userJson) as Map<String, dynamic>;
-    }
-    return null;
-  }
-  
-  // Clear user data
-  static Future<void> clearUser() async {
-    await _secureStorage.delete(key: _userKey);
-  }
-  
-  // Save school ID securely
-  static Future<void> saveSchoolId(int schoolId) async {
-    await _secureStorage.write(key: _schoolIdKey, value: schoolId.toString());
-  }
-  
-  // Get school ID securely
-  static Future<int?> getSchoolId() async {
-    final schoolIdStr = await _secureStorage.read(key: _schoolIdKey);
-    return schoolIdStr != null ? int.tryParse(schoolIdStr) : null;
-  }
-  
-  // Clear school ID
-  static Future<void> clearSchoolId() async {
-    await _secureStorage.delete(key: _schoolIdKey);
-  }
-  
-  // --- Biometric Preferences ---
 
   static Future<void> setBiometricEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
@@ -75,11 +47,9 @@ class StorageHelper {
     return prefs.getBool(_biometricEnabledKey) ?? false;
   }
 
-  // --- Remember Me Support ---
-
-  static Future<void> setRememberMe(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_rememberMeKey, enabled);
+  static Future<bool> isLoggedIn() async {
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
   }
 
   static Future<bool> isRememberMeEnabled() async {
@@ -87,76 +57,86 @@ class StorageHelper {
     return prefs.getBool(_rememberMeKey) ?? false;
   }
 
-  static Future<void> saveCredentials(String email, String password) async {
-    await _secureStorage.write(key: _savedEmailKey, value: email);
-    await _secureStorage.write(key: _savedPasswordKey, value: password);
+  static Future<void> setRememberMe(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberMeKey, enabled);
   }
 
   static Future<Map<String, String>?> getCredentials() async {
-    final email = await _secureStorage.read(key: _savedEmailKey);
-    final password = await _secureStorage.read(key: _savedPasswordKey);
+    final prefs = await SharedPreferences.getInstance();
+
+    final email = prefs.getString('saved_email');
+    final password = prefs.getString('saved_password');
+
     if (email != null && password != null) {
       return {'email': email, 'password': password};
     }
+
     return null;
+  }
+
+  static Future<void> saveCredentials(String email, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('saved_email', email);
+    await prefs.setString('saved_password', password);
   }
 
   static Future<void> clearCredentials() async {
-    await _secureStorage.delete(key: _savedEmailKey);
-    await _secureStorage.delete(key: _savedPasswordKey);
-  }
-
-  // Clear all data
-  static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
-    await clearToken();
-    await clearUser();
-    await clearSchoolId();
-    await prefs.remove(_biometricEnabledKey);
-    // Note: We might want to keep Remember Me or clear it depending on logic.
-    // For a full logout/clear, better to clear credentials too.
-    await clearCredentials();
-    await prefs.remove(_rememberMeKey);
-    
-    // Clear all cache keys
-    final keys = prefs.getKeys();
-    for (String key in keys) {
-      if (key.startsWith('cache_')) {
-        await prefs.remove(key);
-      }
-    }
-    // Also clear generic storage from secure storage
-    final allSecure = await _secureStorage.readAll();
-    for (var key in allSecure.keys) {
-      if (key.startsWith('cache_')) {
-        await _secureStorage.delete(key: key);
-      }
-    }
-  }
-  
-  // Check if user is logged in
-  static Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+
+    await prefs.remove('saved_email');
+    await prefs.remove('saved_password');
   }
 
-  // --- Generic Cache Methods (Now Secure) ---
+  // ==============================
+  // Cache Support
+  // ==============================
 
-  // Save generic data to cache
   static Future<void> saveCache(String key, dynamic data) async {
-    await _secureStorage.write(key: 'cache_$key', value: jsonEncode(data));
+    final prefs = await SharedPreferences.getInstance();
+
+    if (data == null) {
+      await prefs.remove(key);
+      return;
+    }
+
+    if (data is String) {
+      await prefs.setString(key, data);
+    } else if (data is int) {
+      await prefs.setInt(key, data);
+    } else if (data is bool) {
+      await prefs.setBool(key, data);
+    } else {
+      await prefs.setString(key, jsonEncode(data));
+    }
   }
 
-  // Get generic data from cache
   static Future<dynamic> getCache(String key) async {
-    final dataJson = await _secureStorage.read(key: 'cache_$key');
-    if (dataJson != null) {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!prefs.containsKey(key)) return null;
+
+    final value = prefs.get(key);
+
+    if (value is String) {
       try {
-        return jsonDecode(dataJson);
-      } catch (e) {
-        return null;
+        return jsonDecode(value);
+      } catch (_) {
+        return value;
       }
     }
-    return null;
+
+    return value;
+  }
+
+  static Future<void> removeCache(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(key);
+  }
+
+  static Future<void> clearCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 }

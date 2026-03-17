@@ -76,21 +76,14 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
       final userMap = authService.currentUser;
       final user = userMap != null ? UserModel.fromMap(userMap) : null;
       
-      // Get sections assigned to principal
       final assignedSections = user?.assignedSections ?? [];
       
-      if (assignedSections.isEmpty) {
-        // If no assigned sections, get all sections
-        final sectionsData = await sectionService.getSections(isActive: true);
-        _sections = sectionsData.map((data) => SectionModel.fromMap(data)).toList();
-      } else {
-        // Get only assigned sections
-        final sectionsData = await sectionService.getSections(isActive: true);
-        _sections = sectionsData
-            .map((data) => SectionModel.fromMap(data))
-            .where((s) => assignedSections.contains(s.id))
-            .toList();
-      }
+      // Get only assigned sections
+      final sectionsData = await sectionService.getSections(isActive: true);
+      _sections = sectionsData
+          .map((data) => SectionModel.fromMap(data))
+          .where((s) => assignedSections.contains(s.id) || s.assignedPrincipalIds.contains(user?.id))
+          .toList();
 
       if (!mounted) return;
 
@@ -366,6 +359,20 @@ class _PrincipalDashboardState extends State<PrincipalDashboard> {
 
   Widget _buildNoSectionsScreen() {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.blueGrey),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final authService = Provider.of<AuthServiceApi>(context, listen: false);
+              await authService.logout();
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: EmptyStateWidget(
           icon: Icons.school_outlined,

@@ -47,13 +47,17 @@ class FeeServiceApi extends ChangeNotifier {
   }
   
   // Get fee by ID
-  Future<Map<String, dynamic>?> getFee(int id) async {
+  Future<Map<String, dynamic>?> getFee(int id, {int? studentId}) async {
     try {
       final schoolId = await StorageHelper.getSchoolId();
       if (schoolId == null) throw Exception('School ID not found');
       
+      final queryParams = <String, String>{};
+      if (studentId != null) queryParams['student_id'] = studentId.toString();
+
       final response = await _apiService.get(
         ApiConfig.fee(schoolId, id),
+        queryParameters: queryParams,
       );
       
       if (response['success'] == true) {

@@ -50,7 +50,7 @@ class AcademicFlowTest extends TestCase
 
     public function test_can_create_subject()
     {
-        $response = $this->actingAs($this->user, 'api')->postJson('/api/schools/'.$this->school->id.'/subjects', [
+        $response = $this->actingAs($this->user)->postJson('/api/schools/'.$this->school->id.'/subjects', [
             'name' => 'Physics',
             'code' => 'PHY101',
             'class_id' => $this->class->id,
@@ -75,7 +75,7 @@ class AcademicFlowTest extends TestCase
 
         $date = now()->format('Y-m-d');
 
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/attendance", [
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/attendance", [
             'class_id' => $this->class->id,
             'date' => $date,
             'attendances' => [
@@ -111,7 +111,7 @@ class AcademicFlowTest extends TestCase
         ]);
 
         // 1. Create Exam
-        $examResponse = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/exams", [
+        $examResponse = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/exams", [
             'class_id' => $this->class->id,
             'subject_id' => $subject->id,
             'title' => 'Mid-Term',
@@ -122,7 +122,7 @@ class AcademicFlowTest extends TestCase
         $examId = $examResponse->json('id');
 
         // 2. Grade Student
-        $gradeResponse = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/exams/$examId/results", [
+        $gradeResponse = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/exams/$examId/results", [
             'results' => [
                 [
                     'student_id' => $student->id,

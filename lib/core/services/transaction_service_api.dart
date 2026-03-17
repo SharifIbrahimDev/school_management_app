@@ -1,3 +1,4 @@
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
 import '../utils/storage_helper.dart';
@@ -12,11 +13,13 @@ class TransactionServiceApi extends ChangeNotifier {
     int? sessionId,
     int? termId,
     int? studentId,
+    int? feeId,
     String? transactionType,
     String? paymentMethod,
     String? startDate,
     String? endDate,
     String? search,
+    String? status,
     int page = 1,
     int? limit,
   }) async {
@@ -32,11 +35,13 @@ class TransactionServiceApi extends ChangeNotifier {
       if (sessionId != null) queryParams['session_id'] = sessionId.toString();
       if (termId != null) queryParams['term_id'] = termId.toString();
       if (studentId != null) queryParams['student_id'] = studentId.toString();
+      if (feeId != null) queryParams['fee_id'] = feeId.toString();
       if (transactionType != null) queryParams['transaction_type'] = transactionType;
       if (paymentMethod != null) queryParams['payment_method'] = paymentMethod;
       if (startDate != null) queryParams['start_date'] = startDate;
       if (endDate != null) queryParams['end_date'] = endDate;
       if (search != null) queryParams['search'] = search;
+      if (status != null) queryParams['status'] = status;
       if (limit != null) queryParams['limit'] = limit.toString();
       
       final response = await _apiService.get(
@@ -90,6 +95,8 @@ class TransactionServiceApi extends ChangeNotifier {
     String? referenceNumber,
     int? feeId,
     required String transactionDate,
+    String? status,
+    String? proofUrl,
   }) async {
     try {
       final schoolId = await StorageHelper.getSchoolId();
@@ -110,6 +117,8 @@ class TransactionServiceApi extends ChangeNotifier {
           if (referenceNumber != null) 'reference_number': referenceNumber,
           if (feeId != null) 'fee_id': feeId,
           'transaction_date': transactionDate,
+          if (status != null) 'status': status,
+          if (proofUrl != null) 'proof_url': proofUrl,
         },
       );
       
@@ -136,6 +145,7 @@ class TransactionServiceApi extends ChangeNotifier {
     String? category,
     String? description,
     String? referenceNumber,
+    int? feeId,
     String? transactionDate,
   }) async {
     try {
@@ -153,6 +163,7 @@ class TransactionServiceApi extends ChangeNotifier {
       if (category != null) body['category'] = category;
       if (description != null) body['description'] = description;
       if (referenceNumber != null) body['reference_number'] = referenceNumber;
+      if (feeId != null) body['fee_id'] = feeId;
       if (transactionDate != null) body['transaction_date'] = transactionDate;
       
       final response = await _apiService.put(
@@ -287,5 +298,83 @@ class TransactionServiceApi extends ChangeNotifier {
   // Get transactions by student
   Future<List<Map<String, dynamic>>> getTransactionsByStudent(int studentId) async {
     return getTransactions(studentId: studentId);
+  }
+
+  // Verify manual payment
+  Future<Map<String, dynamic>> verifyTransaction(int id, {required String status, String? rejectionReason}) async {
+    try {
+      final schoolId = await StorageHelper.getSchoolId();
+      if (schoolId == null) throw Exception('School ID not found');
+      
+      final response = await _apiService.post(
+        ApiConfig.verifyTransaction(schoolId, id),
+        body: {
+          'status': status,
+          if (rejectionReason != null) 'rejection_reason': rejectionReason,
+        },
+      );
+      
+      if (response['success'] == true) {
+        return response['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to verify transaction');
+      }
+    } catch (e) {
+      throw Exception('Error verifying transaction: $e');
+    }
+  }
+
+  // Submit manual payment with proof
+  Future<Map<String, dynamic>> submitManualPayment({
+    required int sectionId,
+    int? sessionId,
+    int? termId,
+    required int studentId,
+    required int feeId,
+    required double amount,
+    required String paymentMethod,
+    required String transactionDate,
+    String? description,
+    String? proofPath,
+  }) async {
+    try {
+      final schoolId = await StorageHelper.getSchoolId();
+      if (schoolId == null) throw Exception('School ID not found');
+
+      final fields = {
+        'section_id': sectionId.toString(),
+        if (sessionId != null) 'session_id': sessionId.toString(),
+        if (termId != null) 'term_id': termId.toString(),
+        'student_id': studentId.toString(),
+        'fee_id': feeId.toString(),
+        'amount': amount.toString(),
+        'payment_method': paymentMethod,
+        'transaction_type': 'income', // Manual payments are always income from parent perspective
+        'transaction_date': transactionDate,
+        'status': 'pending', // IMPORTANT: Manual payments start as pending
+        if (description != null) 'description': description,
+      };
+
+      List<http.MultipartFile>? files;
+      if (proofPath != null) {
+        files = [
+          await http.MultipartFile.fromPath('proof_file', proofPath),
+        ];
+      }
+
+      final response = await _apiService.multipart(
+        ApiConfig.transactions(schoolId),
+        fields: fields,
+        files: files,
+      );
+
+      if (response['success'] == true) {
+        return response['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response['message'] ?? 'Failed to submit manual payment');
+      }
+    } catch (e) {
+      throw Exception('Error submitting manual payment: $e');
+    }
   }
 }

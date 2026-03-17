@@ -33,6 +33,13 @@ class SectionController extends Controller
      */
     public function store(Request $request, string $schoolId): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can create sections.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'section_name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -80,6 +87,13 @@ class SectionController extends Controller
      */
     public function update(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can update sections.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'section_name'          => 'sometimes|required|string|max:255',
             'description'           => 'nullable|string',
@@ -132,8 +146,15 @@ class SectionController extends Controller
     /**
      * Remove the specified section
      */
-    public function destroy(string $schoolId, string $id): JsonResponse
+    public function destroy(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can delete sections.',
+            ], 403);
+        }
+
         $section = Section::where('school_id', $schoolId)->findOrFail($id);
         $section->delete();
 
@@ -152,6 +173,13 @@ class SectionController extends Controller
      */
     public function assignUsers(Request $request, string $schoolId, string $id): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'proprietor') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only the System Proprietor can assign users to sections.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'user_ids'   => 'required|array',
             'user_ids.*' => 'exists:users,id',

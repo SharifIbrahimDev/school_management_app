@@ -29,6 +29,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../sections/add_section_screen.dart';
 import '../sessions/add_session_screen.dart';
 import '../../widgets/app_snackbar.dart';
+import '../transactions/pending_transactions_screen.dart';
 
 class DashboardContent extends StatefulWidget {
   final List<SectionModel> sections;
@@ -399,12 +400,23 @@ class _DashboardContentState extends State<DashboardContent> {
                 color: AppTheme.neonBlue,
                 onTap: () => _navigateToHistory(context, schoolId),
               ),
-              if (widget.role == 'Bursar')
                 _ActionItem(
                   label: "Debtors",
                   icon: Icons.error_outline_rounded,
                   color: AppTheme.neonAmber,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DebtorsListScreen())),
+                ),
+              if (widget.role == 'Bursar')
+                _ActionItem(
+                  label: "Approvals",
+                  icon: Icons.fact_check_rounded,
+                  color: AppTheme.neonPurple,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PendingTransactionsScreen(schoolId: schoolId),
+                    ),
+                  ),
                 ),
               _ActionItem(
                 label: "Fees",
@@ -460,6 +472,12 @@ class _DashboardContentState extends State<DashboardContent> {
               ),
               const SizedBox(height: 16),
               _buildSnapshotItem("Transactions", "Real-time", AppTheme.neonBlue),
+              if (widget.role == 'Bursar' && widget.dashboardStats.containsKey('pendingApprovals'))
+                _buildSnapshotItem(
+                  "Approvals", 
+                  "${widget.dashboardStats['pendingApprovals']?.toInt() ?? 0} Pending", 
+                  (widget.dashboardStats['pendingApprovals'] ?? 0) > 0 ? AppTheme.neonAmber : AppTheme.neonEmerald
+                ),
               _buildSnapshotItem("Compliance", "98%", AppTheme.neonEmerald),
               _buildSnapshotItem("Reporting", "Standard", AppTheme.neonPurple),
             ],

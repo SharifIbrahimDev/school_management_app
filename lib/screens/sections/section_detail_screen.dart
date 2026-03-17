@@ -39,7 +39,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
   Future<void> _refreshSection() async {
     try {
       final sectionService = Provider.of<SectionServiceApi>(context, listen: false);
-      final fresh = await sectionService.getSection(int.parse(_section.id));
+      final fresh = await sectionService.getSection(int.parse(_section.id), forceRefresh: true);
       if (fresh != null && mounted) {
         setState(() => _section = SectionModel.fromMap(fresh));
       }
@@ -294,7 +294,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                         _buildModernDetailItem(
                           context,
                           icon: Icons.person,
-                          title: 'Principals',
+                          title: 'Principal',
                           value: snapshot.connectionState == ConnectionState.waiting
                               ? 'Loading...'
                               : snapshot.hasError
@@ -303,13 +303,13 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                               ? _section.assignedPrincipalIds
                               .map((id) => userNames[id] ?? 'Unknown')
                               .join(', ')
-                              : 'No principals assigned',
+                              : 'No principal assigned',
                           isImportant: true,
                         ),
                         _buildModernDetailItem(
                           context,
                           icon: Icons.account_balance_wallet,
-                          title: 'Bursars',
+                          title: 'Bursar',
                           value: snapshot.connectionState == ConnectionState.waiting
                               ? 'Loading...'
                               : snapshot.hasError
@@ -318,7 +318,7 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                               ? _section.assignedBursarIds
                               .map((id) => userNames[id] ?? 'Unknown')
                               .join(', ')
-                              : 'No bursars assigned',
+                              : 'No bursar assigned',
                           isImportant: true,
                         ),
                       ],
@@ -420,8 +420,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 CustomButton(
-                  text: 'Assign Principal',
-                  icon: Icons.person_add,
+                  text: _section.assignedPrincipalIds.isNotEmpty ? 'Unassign Principal' : 'Assign Principal',
+                  icon: _section.assignedPrincipalIds.isNotEmpty ? Icons.person_remove : Icons.person_add,
                   backgroundColor: Colors.blue,
                   onPressed: () async {
                     final result = await Navigator.push(
@@ -434,8 +434,8 @@ class _SectionDetailScreenState extends State<SectionDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 CustomButton(
-                  text: 'Assign Bursar',
-                  icon: Icons.account_balance_wallet,
+                  text: _section.assignedBursarIds.isNotEmpty ? 'Unassign Bursar' : 'Assign Bursar',
+                  icon: _section.assignedBursarIds.isNotEmpty ? Icons.person_remove : Icons.account_balance_wallet,
                   backgroundColor: Colors.indigo,
                   onPressed: () async {
                     final result = await Navigator.push(

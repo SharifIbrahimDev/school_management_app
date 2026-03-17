@@ -60,7 +60,7 @@ class AttendanceFlowTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/schools/{$this->schoolId}/attendance", $payload);
 
         $response->assertStatus(200)
@@ -96,7 +96,7 @@ class AttendanceFlowTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/schools/{$this->schoolId}/attendance", $payload);
 
         $response->assertStatus(200);
@@ -119,7 +119,7 @@ class AttendanceFlowTest extends TestCase
             'recorded_by' => $this->user->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$this->schoolId}/attendance?class_id={$this->class->id}&date={$date}");
 
         $response->assertStatus(200)
@@ -133,7 +133,7 @@ class AttendanceFlowTest extends TestCase
             'school_id' => $this->schoolId,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$this->schoolId}/students/{$this->students[0]->id}/attendance");
 
         $response->assertStatus(200)

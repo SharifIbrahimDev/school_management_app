@@ -29,6 +29,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       appBar: CustomAppBar(
         title: 'Teacher Dashboard',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.blueGrey),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await widget.authService.logout();
+            },
+          ),
           const NotificationBadge(),
         ],
       ),

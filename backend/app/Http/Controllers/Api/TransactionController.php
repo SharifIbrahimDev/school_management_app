@@ -30,6 +30,9 @@ class TransactionController extends Controller
             ->when($request->has('student_id'), function ($query) use ($request) {
                 $query->where('student_id', $request->student_id);
             })
+            ->when($request->has('fee_id'), function ($query) use ($request) {
+                $query->where('fee_id', $request->fee_id);
+            })
             ->when($request->has('transaction_type'), function ($query) use ($request) {
                 $query->where('transaction_type', $request->transaction_type);
             })
@@ -41,6 +44,9 @@ class TransactionController extends Controller
             })
             ->when($request->has('end_date'), function ($query) use ($request) {
                 $query->where('transaction_date', '<=', $request->end_date);
+            })
+            ->when($request->has('status'), function ($query) use ($request) {
+                $query->where('status', $request->status);
             })
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where(function ($q) use ($request) {
@@ -75,7 +81,11 @@ class TransactionController extends Controller
             'category' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
+            'fee_id' => 'nullable|exists:fees,id',
             'transaction_date' => 'required|date',
+            'status' => 'nullable|in:pending,approved,rejected',
+            'proof_url' => 'nullable|string',
+            'proof_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -87,6 +97,15 @@ class TransactionController extends Controller
 
         // Get authenticated user ID (will be from JWT token)
         $recordedBy = $request->user() ? $request->user()->id : 1; // Default to 1 for now
+
+        // Handle proof file upload
+        $proofUrl = $request->proof_url;
+        if ($request->hasFile('proof_file')) {
+            $file = $request->file('proof_file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('proofs', $fileName, 'public');
+            $proofUrl = asset('storage/' . $path);
+        }
 
         $transaction = Transaction::create([
             'school_id' => $schoolId,
@@ -100,8 +119,11 @@ class TransactionController extends Controller
             'category' => $request->category,
             'description' => $request->description,
             'reference_number' => $request->reference_number,
+            'fee_id' => $request->fee_id,
             'transaction_date' => $request->transaction_date,
             'recorded_by' => $recordedBy,
+            'status' => $request->status ?? 'approved',
+            'proof_url' => $proofUrl,
         ]);
 
         // Trigger notification for payment (income) if linked to a student with a parent
@@ -353,6 +375,61 @@ class TransactionController extends Controller
                 'total_expenses' => $monthlySummary->sum('expenses'),
                 'total_balance' => $monthlySummary->sum('balance'),
             ],
+        ]);
+    }
+
+    /**
+     * Verify a manual payment (approve or reject)
+     */
+    public function verifyManualPayment(Request $request, string $schoolId, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:approved,rejected',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $transaction = Transaction::where('school_id', $schoolId)->findOrFail($id);
+        
+        $transaction->status = $request->status;
+        if ($request->has('rejection_reason')) {
+            $transaction->description = ($transaction->description ? $transaction->description . " | " : "") . "Rejection Reason: " . $request->rejection_reason;
+        }
+        
+        $transaction->save();
+        
+        // Trigger notification for verification status change if it's an income (payment) for a student
+        if ($transaction->student_id) {
+            $student = $transaction->student;
+            if ($student && $student->parent_id) {
+                $statusUpper = strtoupper($transaction->status);
+                \App\Models\Notification::create([
+                    'user_id' => $student->parent_id,
+                    'type' => 'payment_verification',
+                    'title' => "Payment $statusUpper",
+                    'message' => $transaction->status === 'approved' 
+                        ? "Your payment of {$transaction->amount} for {$student->student_name} has been verified and approved."
+                        : "Your payment of {$transaction->amount} for {$student->student_name} was rejected. Reason: " . ($request->rejection_reason ?? 'Not specified'),
+                    'data' => [
+                        'transaction_id' => $transaction->id,
+                        'student_id' => $student->id,
+                        'status' => $transaction->status,
+                        'amount' => $transaction->amount,
+                    ],
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaction status updated to ' . $request->status,
+            'data' => $transaction->load(['student', 'recorder']),
         ]);
     }
 }

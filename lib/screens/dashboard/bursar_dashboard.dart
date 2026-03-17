@@ -48,6 +48,7 @@ class _BursarDashboardState extends State<BursarDashboard> {
     'totalFees': 0.0,
     'outstandingDebt': 0.0,
     'balanceRemaining': 0.0,
+    'pendingApprovals': 0.0,
   };
   
   bool _isLoading = true;
@@ -72,21 +73,14 @@ class _BursarDashboardState extends State<BursarDashboard> {
       final userMap = authService.currentUser;
       final user = userMap != null ? UserModel.fromMap(userMap) : null;
       
-      // Get sections assigned to bursar
       final assignedSections = user?.assignedSections ?? [];
       
-      if (assignedSections.isEmpty) {
-        // If no assigned sections, get all sections
-        final sectionsData = await sectionService.getSections(isActive: true);
-        _sections = sectionsData.map((data) => SectionModel.fromMap(data)).toList();
-      } else {
-        // Get only assigned sections
-        final sectionsData = await sectionService.getSections(isActive: true);
-        _sections = sectionsData
-            .map((data) => SectionModel.fromMap(data))
-            .where((s) => assignedSections.contains(s.id))
-            .toList();
-      }
+      // Get only assigned sections
+      final sectionsData = await sectionService.getSections(isActive: true);
+      _sections = sectionsData
+          .map((data) => SectionModel.fromMap(data))
+          .where((s) => assignedSections.contains(s.id) || s.assignedBursarIds.contains(user?.id))
+          .toList();
 
       if (!mounted) return;
 
@@ -203,6 +197,10 @@ class _BursarDashboardState extends State<BursarDashboard> {
         termId: _selectedTermId != null ? int.tryParse(_selectedTermId!) : null,
       );
       
+      final pendingData = await transactionService.getTransactions(
+        status: 'pending',
+      );
+      
       if (!mounted) return;
 
       setState(() {
@@ -212,6 +210,7 @@ class _BursarDashboardState extends State<BursarDashboard> {
           'totalFees': (feesData['total_amount'] as num?)?.toDouble() ?? 0.0,
           'outstandingDebt': (feesData['total_balance'] as num?)?.toDouble() ?? 0.0,
           'balanceRemaining': (statsData['balance'] as num?)?.toDouble() ?? 0.0,
+          'pendingApprovals': (pendingData.length).toDouble(),
         };
         _isLoading = false;
       });
@@ -345,6 +344,20 @@ class _BursarDashboardState extends State<BursarDashboard> {
 
   Widget _buildNoSectionsScreen() {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.blueGrey),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final authService = Provider.of<AuthServiceApi>(context, listen: false);
+              await authService.logout();
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: EmptyStateWidget(
           icon: Icons.account_balance_rounded,

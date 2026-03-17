@@ -137,7 +137,8 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPrincipal = _currentUser?.role == UserRole.principal;
+    final isAuthorized = _currentUser?.role == UserRole.principal || _currentUser?.role == UserRole.proprietor;
+    final isProprietor = _currentUser?.role == UserRole.proprietor;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -149,7 +150,7 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
           ),
         ],
       ),
-      floatingActionButton: _selectedSectionId != null && isPrincipal
+      floatingActionButton: _selectedSectionId != null && isAuthorized
           ? Padding(
               padding: const EdgeInsets.only(bottom: 80),
               child: FloatingActionButton(
@@ -228,133 +229,133 @@ class _AcademicSessionsScreenState extends State<AcademicSessionsScreen> {
                         ),
                       ),
                     
-                    if (_assignedSections.isEmpty)
-                      Expanded(
-                        child: EmptyStateWidget(
-                          icon: Icons.school_outlined,
-                          title: 'No Sections Assigned',
-                          message: 'You need to be assigned to a section to manage academic sessions.',
-                          actionButtonText: 'Refresh',
-                          onActionPressed: _loadInitialData,
-                        ),
-                      )
-                    else if (_errorMessage != null)
-                      ErrorDisplayWidget(
-                        error: _errorMessage!,
-                        onRetry: _loadSessions,
-                      ),
-    
                     Expanded(
-                      child: _sessions.isEmpty
+                      child: _assignedSections.isEmpty
                           ? EmptyStateWidget(
-                              icon: Icons.calendar_today_outlined,
-                              title: 'No Sessions Found',
-                              message: 'Start by creating your first academic session for this section.',
-                              actionButtonText: isPrincipal ? 'Add Session' : null,
-                              onActionPressed: isPrincipal 
-                                  ? () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => AddSessionScreen(
-                                            selectedSectionId: _selectedSectionId!,
-                                            onSuccess: _loadSessions,
-                                            schoolId: _currentUser?.schoolId ?? '',
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  : null,
+                              icon: Icons.school_outlined,
+                              title: 'No Sections Assigned',
+                              message: 'You need to be assigned to a section to manage academic sessions.',
+                              actionButtonText: 'Refresh',
+                              onActionPressed: _loadInitialData,
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _sessions.length,
-                              itemBuilder: (context, index) {
-                                final session = _sessions[index];
-                                return Container(
-                                  decoration: AppTheme.glassDecoration(
-                                    context: context,
-                                    opacity: 0.6,
-                                    borderRadius: 16,
-                                    hasGlow: session.isActive,
-                                    borderColor: session.isActive ? AppTheme.primaryColor.withValues(alpha: 0.5) : Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(16),
-                                    leading: CircleAvatar(
-                                      backgroundColor: session.isActive ? AppTheme.primaryColor : Colors.grey[300],
-                                      child: const Icon(Icons.calendar_today, color: Colors.white),
-                                    ),
-                                    title: Text(
-                                      session.sessionName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.date_range, size: 14, color: Colors.grey[600]),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${DateFormat('MMM dd, yyyy').format(session.startDate)} - ${DateFormat('MMM dd, yyyy').format(session.endDate)}',
-                                            style: TextStyle(color: Colors.grey[700]),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (isPrincipal)
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, color: Colors.blue),
-                                            onPressed: () => Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => EditSessionScreen(
-                                                  session: session,
-                                                  onSuccess: _loadSessions,
+                          : _errorMessage != null
+                              ? ErrorDisplayWidget(
+                                  error: _errorMessage!,
+                                  onRetry: _loadSessions,
+                                )
+                              : _sessions.isEmpty
+                                  ? EmptyStateWidget(
+                                      icon: Icons.calendar_today_outlined,
+                                      title: 'No Sessions Found',
+                                      message: 'Start by creating your first academic session for this section.',
+                                      actionButtonText: isAuthorized ? 'Add Session' : null,
+                                      onActionPressed: isAuthorized 
+                                          ? () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => AddSessionScreen(
+                                                    selectedSectionId: _selectedSectionId ?? '',
+                                                    onSuccess: _loadSessions,
+                                                    schoolId: _currentUser?.schoolId ?? '',
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
+                                              );
+                                            }
+                                          : null,
+                                    )
+                                  : ListView.builder(
+                                      padding: const EdgeInsets.all(16),
+                                      itemCount: _sessions.length,
+                                      itemBuilder: (context, index) {
+                                        final session = _sessions[index];
+                                        return Container(
+                                          decoration: AppTheme.glassDecoration(
+                                            context: context,
+                                            opacity: 0.6,
+                                            borderRadius: 16,
+                                            hasGlow: session.isActive,
+                                            borderColor: session.isActive ? AppTheme.primaryColor.withValues(alpha: 0.5) : Theme.of(context).dividerColor.withValues(alpha: 0.1),
                                           ),
-                                        if (isPrincipal)
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, color: Colors.red),
-                                            onPressed: () => _deleteSession(session),
-                                          ),
-                                        if (session.isActive)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Colors.green),
+                                          margin: const EdgeInsets.only(bottom: 16),
+                                          child: ListTile(
+                                            contentPadding: const EdgeInsets.all(16),
+                                            leading: CircleAvatar(
+                                              backgroundColor: session.isActive ? AppTheme.primaryColor : Colors.grey[300],
+                                              child: const Icon(Icons.calendar_today, color: Colors.white),
                                             ),
-                                            child: const Text(
-                                              'Active',
-                                              style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
+                                            title: Text(
+                                              session.sessionName,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                             ),
+                                            subtitle: Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.date_range, size: 14, color: Colors.grey[600]),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child: Text(
+                                                        '${DateFormat('MMM dd, yyyy').format(session.startDate)} - ${DateFormat('MMM dd, yyyy').format(session.endDate)}',
+                                                        style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                            ),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (isAuthorized)
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                                    onPressed: () => Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => EditSessionScreen(
+                                                          session: session,
+                                                          onSuccess: _loadSessions,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (isProprietor)
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                                    onPressed: () => _deleteSession(session),
+                                                  ),
+                                                if (session.isActive)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green.withValues(alpha: 0.2),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(color: Colors.green),
+                                                    ),
+                                                    child: const Text(
+                                                      'Active',
+                                                      style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => SessionDetailScreen(
+                                                    session: session,
+                                                    schoolId: _currentUser?.schoolId ?? '',
+                                                    sectionId: _selectedSectionId ?? '',
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
-                                      ],
+                                        );
+                                      },
                                     ),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => SessionDetailScreen(
-                                            session: session,
-                                            schoolId: _currentUser?.schoolId ?? '',
-                                            sectionId: _selectedSectionId!,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
                     ),
                   ],
                 ),

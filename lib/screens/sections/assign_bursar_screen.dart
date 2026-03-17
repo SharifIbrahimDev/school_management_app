@@ -55,6 +55,7 @@ class _AssignBursarScreenState extends State<AssignBursarScreen> {
       if (isAssigned) {
         currentIds.remove(bursarId);
       } else {
+        currentIds.clear();
         currentIds.add(bursarId);
       }
 

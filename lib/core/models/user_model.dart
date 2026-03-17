@@ -85,10 +85,10 @@ class UserModel {
       phoneNumber: map['phone_number'] ?? map['phoneNumber'] ?? '',
       address: map['address'] ?? '',
       role: _roleFromString(map['role']),
-      assignedSchools: _parseList(map['assigned_schools'] ?? map['assignedSchools']),
-      assignedSections: _parseList(map['assigned_sections'] ?? map['assignedSections']),
-      assignedClasses: _parseList(map['assigned_classes'] ?? map['assignedClasses']),
-      assignedStudents: _parseList(map['assigned_students'] ?? map['assignedStudents']),
+      assignedSchools: _parseList(map['assigned_schools'] ?? map['assignedSchools'] ?? map['schools']),
+      assignedSections: _parseList(map['assigned_sections'] ?? map['assignedSections'] ?? map['sections']),
+      assignedClasses: _parseList(map['assigned_classes'] ?? map['assignedClasses'] ?? map['classes']),
+      assignedStudents: _parseList(map['assigned_students'] ?? map['assignedStudents'] ?? map['students']),
       schoolId: map['school_id']?.toString() ?? map['schoolId']?.toString(),
       sectionId: map['section_id']?.toString() ?? map['sectionId']?.toString(),
       createdAt: parseDate(map['created_at'] ?? map['createdAt']),
@@ -147,6 +147,7 @@ class UserModel {
     String? schoolId,
     String? sectionId,
     DateTime? lastSignIn,
+    bool? isActive,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -166,7 +167,7 @@ class UserModel {
       schoolId: schoolId ?? this.schoolId,
       sectionId: sectionId ?? this.sectionId,
       lastSignIn: lastSignIn ?? this.lastSignIn,
-      isActive: isActive ?? isActive,
+      isActive: isActive ?? this.isActive,
     );
   }
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/fee_model.dart';
@@ -46,9 +46,27 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
   
   Future<void> _loadData() async {
     await Future.wait([
+      _loadFee(),
       _loadTransactions(),
       _loadStudent(),
     ]);
+  }
+
+  Future<void> _loadFee() async {
+    try {
+      final feeService = Provider.of<FeeServiceApi>(context, listen: false);
+      final feeData = await feeService.getFee(
+        int.parse(_fee.id),
+        studentId: int.tryParse(_fee.studentId),
+      );
+      if (feeData != null && mounted) {
+        setState(() {
+          _fee = FeeModel.fromMap(feeData);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading fee: $e');
+    }
   }
 
   Future<void> _loadUser() async {
@@ -82,6 +100,7 @@ class _FeeDetailScreenState extends State<FeeDetailScreen> {
       // For now we just load student transactions.
       final txs = await transactionService.getTransactions(
         studentId: int.tryParse(_fee.studentId),
+        feeId: int.tryParse(_fee.id),
       );
       if (context.mounted) {
         setState(() {

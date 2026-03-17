@@ -9,6 +9,21 @@ enum CreditCategory { schoolFees, registrationFees, books, otherIncome }
 
 enum DebitCategory { salary, stationary, cleaning, maintenance, generalExpenses, utilities, rent, otherExpenses }
 
+enum TransactionStatus { pending, approved, rejected }
+
+extension TransactionStatusExtension on TransactionStatus {
+  String get displayName {
+    switch (this) {
+      case TransactionStatus.pending:
+        return 'Pending';
+      case TransactionStatus.approved:
+        return 'Approved';
+      case TransactionStatus.rejected:
+        return 'Rejected';
+    }
+  }
+}
+
 extension TransactionTypeExtension on TransactionType {
   String get displayName => this == TransactionType.credit ? 'Credit' : 'Debit';
 }
@@ -54,6 +69,8 @@ class TransactionModel {
   final String? studentId;
   final String? studentName;
   final String? feeId;
+  final TransactionStatus status;
+  final String? proofUrl;
 
   TransactionModel({
     required this.id,
@@ -75,6 +92,8 @@ class TransactionModel {
     this.studentId,
     this.studentName,
     this.feeId,
+    this.status = TransactionStatus.approved,
+    this.proofUrl,
   }) {
     if (id.isEmpty) throw ArgumentError('id cannot be empty');
     if (amount <= 0) throw ArgumentError('amount must be positive');
@@ -106,6 +125,8 @@ class TransactionModel {
       'student_id': studentId,
       'student_name': studentName,
       'fee_id': feeId,
+      'status': status.toString().split('.').last,
+      'proof_url': proofUrl,
     };
   }
 
@@ -116,6 +137,12 @@ class TransactionModel {
       
       final paymentTypeStr = map['payment_method'] as String? ?? 'cash';
       final paymentType = _getFrontendPaymentType(paymentTypeStr);
+
+      final statusStr = map['status'] as String? ?? 'approved';
+      final status = TransactionStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == statusStr,
+        orElse: () => TransactionStatus.approved,
+      );
 
       DateTime parseDate(dynamic value) {
         if (value == null) return DateTime.now();
@@ -143,6 +170,8 @@ class TransactionModel {
         studentId: (map['student_id'] ?? map['studentId'])?.toString(),
         studentName: (map['student_name'] ?? map['studentName'])?.toString(),
         feeId: (map['fee_id'] ?? map['feeId'])?.toString(),
+        status: status,
+        proofUrl: map['proof_url'] as String?,
       );
     } catch (e) {
       debugPrint('Error parsing TransactionModel: $e');
@@ -183,6 +212,8 @@ class TransactionModel {
     String? studentId,
     String? studentName,
     String? feeId,
+    TransactionStatus? status,
+    String? proofUrl,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -204,6 +235,8 @@ class TransactionModel {
       studentId: studentId ?? this.studentId,
       studentName: studentName ?? this.studentName,
       feeId: feeId ?? this.feeId,
+      status: status ?? this.status,
+      proofUrl: proofUrl ?? this.proofUrl,
     );
   }
 

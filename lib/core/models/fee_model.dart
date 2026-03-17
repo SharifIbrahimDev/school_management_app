@@ -65,33 +65,48 @@ class FeeModel {
   }
 
   factory FeeModel.fromMap(Map<String, dynamic> map) {
+    String toStringSafe(dynamic value) => value != null ? value.toString() : '';
+    
+    double toDoubleSafe(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return FeeModel(
-      id: map['id'] ?? '',
-      schoolId: map['schoolId'] ?? '',
-      sectionId: map['sectionId'] ?? '',
-      sessionId: map['sessionId'] ?? '',
-      termId: map['termId'] ?? '',
-      classId: map['classId'] ?? '',
-      studentId: map['studentId'] ?? '',
-      feeType: map['feeType'] ?? '',
-      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      balance: (map['balance'] ?? map['amount'] as num?)?.toDouble() ?? 0.0,
-      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : DateTime.now(),
+      id: toStringSafe(map['id']),
+      schoolId: toStringSafe(map['school_id'] ?? map['schoolId']),
+      sectionId: toStringSafe(map['section_id'] ?? map['sectionId']),
+      sessionId: toStringSafe(map['session_id'] ?? map['sessionId']),
+      termId: toStringSafe(map['term_id'] ?? map['termId']),
+      classId: toStringSafe(map['class_id'] ?? map['classId']),
+      studentId: toStringSafe(map['student_id'] ?? map['studentId']),
+      feeType: toStringSafe(map['fee_name'] ?? map['feeType']),
+      amount: toDoubleSafe(map['amount']),
+      balance: toDoubleSafe(map['balance'] ?? map['amount']),
+      dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : (map['dueDate'] != null ? DateTime.parse(map['dueDate']) : DateTime.now()),
       status: FeeStatus.values.firstWhere(
             (e) => e.toString().split('.').last == map['status'],
         orElse: () => FeeStatus.pending,
       ),
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
-      lastModified: map['lastModified'] != null ? DateTime.parse(map['lastModified']) : DateTime.now(),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : (map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now()),
+      lastModified: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : (map['lastModified'] != null ? DateTime.parse(map['lastModified']) : DateTime.now()),
       description: map['description'],
-      parentId: map['parentId'],
+      parentId: toStringSafe(map['parent_id'] ?? map['parentId']),
       feeScope: FeeScope.values.firstWhere(
-            (e) => e.name == map['feeScope'],
+            (e) {
+              final name = map['fee_scope'] ?? map['feeScope'] ?? '';
+              return e.name == name || (e == FeeScope.classScope && name == 'class');
+            },
         orElse: () => FeeScope.section,
       ),
-      originScope: map['originScope'] != null
+      originScope: (map['origin_scope'] ?? map['originScope']) != null
           ? FeeScope.values.firstWhere(
-            (e) => e.name == map['originScope'],
+            (e) {
+              final name = map['origin_scope'] ?? map['originScope'] ?? '';
+              return e.name == name || (e == FeeScope.classScope && name == 'class');
+            },
         orElse: () => FeeScope.section,
       )
           : null,

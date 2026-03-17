@@ -62,7 +62,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $otherClass->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students");
 
         $response->assertStatus(200)
@@ -92,7 +92,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $anotherClass->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students?section_id={$this->section->id}");
 
         $response->assertStatus(200);
@@ -109,7 +109,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $this->class->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students?class_id={$this->class->id}");
 
         $response->assertStatus(200);
@@ -132,7 +132,7 @@ class StudentFlowTest extends TestCase
             'parent_id' => $parent->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students?parent_id={$parent->id}");
 
         $response->assertStatus(200);
@@ -151,7 +151,7 @@ class StudentFlowTest extends TestCase
             'admission_number' => 'UNIQUE123',
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students?search=Unique");
 
         $response->assertStatus(200);
@@ -175,7 +175,7 @@ class StudentFlowTest extends TestCase
             'parent_email' => 'parent@example.com',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students", $payload);
 
         $response->assertStatus(201)
@@ -198,7 +198,7 @@ class StudentFlowTest extends TestCase
             // Missing required fields: section_id, class_id
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students", $payload);
 
         $response->assertStatus(422)
@@ -221,7 +221,7 @@ class StudentFlowTest extends TestCase
             'admission_number' => 'DUPLICATE123', // Duplicate
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students", $payload);
 
         $response->assertStatus(422)
@@ -242,7 +242,7 @@ class StudentFlowTest extends TestCase
             'parent_id' => $parent->id,
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students", $payload);
 
         $response->assertStatus(201);
@@ -259,13 +259,13 @@ class StudentFlowTest extends TestCase
             'class_id' => $this->class->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students/{$student->id}");
 
         $response->assertStatus(200)
             ->assertJson(['success' => true])
             ->assertJsonStructure([
-                'data' => ['id', 'student_name', 'school', 'section', 'class_model'],
+                'data' => ['id', 'student_name', 'school', 'sections', 'class_model'],
             ]);
     }
 
@@ -283,7 +283,7 @@ class StudentFlowTest extends TestCase
             'address' => 'New Address',
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/students/{$student->id}", $payload);
 
         $response->assertStatus(200)
@@ -312,7 +312,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $this->class->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/students/{$student->id}", [
                 'class_id' => $newClass->id,
             ]);
@@ -334,7 +334,7 @@ class StudentFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->putJson("/api/schools/{$this->school->id}/students/{$student->id}", [
                 'is_active' => false,
             ]);
@@ -355,7 +355,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $this->class->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->deleteJson("/api/schools/{$this->school->id}/students/{$student->id}");
 
         $response->assertStatus(200)
@@ -380,7 +380,7 @@ class StudentFlowTest extends TestCase
             'student_id' => $student->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students/{$student->id}/transactions");
 
         $response->assertStatus(200)
@@ -415,7 +415,7 @@ class StudentFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students/{$student->id}/payment-summary");
 
         $response->assertStatus(200)
@@ -448,7 +448,7 @@ class StudentFlowTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students/import", $payload);
 
         $response->assertStatus(201)
@@ -487,7 +487,7 @@ class StudentFlowTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/schools/{$this->school->id}/students/import", $payload);
 
         $response->assertStatus(207); // Multi-status (some success, some errors)
@@ -511,7 +511,7 @@ class StudentFlowTest extends TestCase
             'class_id' => $otherClass->id,
         ]);
 
-        $response = $this->actingAs($this->admin, 'api')
+        $response = $this->actingAs($this->admin)
             ->getJson("/api/schools/{$this->school->id}/students/{$otherStudent->id}");
 
         $response->assertStatus(404);

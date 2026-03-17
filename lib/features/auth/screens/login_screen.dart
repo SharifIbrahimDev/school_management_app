@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/utils/snackbar_utils.dart';
-import '../providers/auth_provider.dart';
+import '../../../core/services/auth_service_api.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+/// Login screen backed by Provider / AuthServiceApi (not Riverpod).
+class FeatureLoginScreen extends StatefulWidget {
+  const FeatureLoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  State<FeatureLoginScreen> createState() => _FeatureLoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _FeatureLoginScreenState extends State<FeatureLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,28 +25,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      await ref.read(authProvider.notifier).login(
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    try {
+      await context.read<AuthServiceApi>().login(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
-      
-      // Check if the widget is still in the tree before using 'ref' or 'context'
-      if (!mounted) return;
-
-      final state = ref.read(authProvider);
-      if (state.status == AuthStatus.error) {
-        SnackbarUtils.showError(context, state.errorMessage ?? 'Login failed');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    final isLoading = authState.status == AuthStatus.loading;
-
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -83,9 +83,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter email';
-                    if (!value.contains('@')) return 'Enter a valid email';
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please enter email';
+                    if (!v.contains('@')) return 'Enter a valid email';
                     return null;
                   },
                 ).animate().fadeIn(delay: 300.ms),
@@ -96,27 +96,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(_obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   obscureText: _obscurePassword,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter password';
-                    if (value.length < 6) return 'Password too short';
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please enter password';
+                    if (v.length < 6) return 'Password too short';
                     return null;
                   },
                 ).animate().fadeIn(delay: 400.ms),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: isLoading ? null : _handleLogin,
-                  child: isLoading
+                  onPressed: _isLoading ? null : _handleLogin,
+                  child: _isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Login'),
                 ).animate().fadeIn(delay: 500.ms),

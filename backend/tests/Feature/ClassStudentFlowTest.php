@@ -62,7 +62,7 @@ class ClassStudentFlowTest extends TestCase
             'is_active' => true,
         ];
 
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/classes", $classData);
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/classes", $classData);
 
         $response->assertStatus(201)
             ->assertJsonFragment([
@@ -95,7 +95,7 @@ class ClassStudentFlowTest extends TestCase
             'parent_name' => 'Mr. Doe',
         ];
 
-        $response = $this->actingAs($this->user, 'api')->postJson("/api/schools/{$this->school->id}/students", $studentData);
+        $response = $this->actingAs($this->user)->postJson("/api/schools/{$this->school->id}/students", $studentData);
 
         $response->assertStatus(201)
             ->assertJsonFragment([
@@ -137,7 +137,7 @@ class ClassStudentFlowTest extends TestCase
             'student_name' => 'Student B',
         ]);
 
-        $response = $this->actingAs($this->user, 'api')->getJson("/api/schools/{$this->school->id}/students?class_id={$classA->id}");
+        $response = $this->actingAs($this->user)->getJson("/api/schools/{$this->school->id}/students?class_id={$classA->id}");
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data.data')

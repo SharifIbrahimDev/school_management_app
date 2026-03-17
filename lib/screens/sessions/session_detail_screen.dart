@@ -61,7 +61,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Widget build(BuildContext context) {
     final termService = Provider.of<TermServiceApi>(context);
     final authService = Provider.of<AuthServiceApi>(context);
-    final isPrincipal = authService.currentUserModel?.role == UserRole.principal;
+    final isAuthorized = authService.currentUserModel?.role == UserRole.principal || authService.currentUserModel?.role == UserRole.proprietor;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -73,7 +73,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: isPrincipal
+      floatingActionButton: isAuthorized
           ? FloatingActionButton(
         onPressed: () {
           Navigator.push(

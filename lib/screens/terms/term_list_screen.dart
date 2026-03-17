@@ -65,7 +65,8 @@ class TermListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthServiceApi>(context);
-    final isPrincipal = authService.currentUserModel?.role == UserRole.principal;
+    final isAuthorized = authService.currentUserModel?.role == UserRole.principal || authService.currentUserModel?.role == UserRole.proprietor;
+    final isProprietor = authService.currentUserModel?.role == UserRole.proprietor;
 
     return Column(
       children: [
@@ -102,8 +103,8 @@ class TermListView extends StatelessWidget {
                 icon: Icons.event_note_rounded,
                 title: 'No Terms Found',
                 message: 'No terms have been added to this session yet.',
-                actionButtonText: isPrincipal ? 'Add Term' : 'Refresh',
-                onActionPressed: isPrincipal 
+                actionButtonText: isAuthorized ? 'Add Term' : 'Refresh',
+                onActionPressed: isAuthorized 
                     ? () { /* This would need navigation to AddTermScreen if it was easily accessible here */ } 
                     : onRefresh,
               );
@@ -146,7 +147,7 @@ class TermListView extends StatelessWidget {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isPrincipal)
+                        if (isAuthorized)
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () => Navigator.push(
@@ -162,7 +163,7 @@ class TermListView extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (isPrincipal)
+                        if (isProprietor)
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _deleteTerm(context, term),

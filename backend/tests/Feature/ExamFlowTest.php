@@ -65,7 +65,7 @@ class ExamFlowTest extends TestCase
             'date' => now()->format('Y-m-d'),
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/schools/{$this->schoolId}/exams", $payload);
 
         $response->assertStatus(201)
@@ -80,7 +80,7 @@ class ExamFlowTest extends TestCase
             'subject_id' => $this->subject->id,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$this->schoolId}/exams?class_id={$this->class->id}");
 
         $response->assertStatus(200)
@@ -103,7 +103,7 @@ class ExamFlowTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->postJson("/api/schools/{$this->schoolId}/exams/{$exam->id}/results", $payload);
 
         $response->assertStatus(200)
@@ -129,7 +129,7 @@ class ExamFlowTest extends TestCase
             'score' => 75,
         ]);
 
-        $response = $this->actingAs($this->user, 'api')
+        $response = $this->actingAs($this->user)
             ->getJson("/api/schools/{$this->schoolId}/exams/{$exam->id}/results");
 
         $response->assertStatus(200)

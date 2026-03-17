@@ -4,11 +4,19 @@ import 'package:local_auth/local_auth.dart';
 import '../config/api_config.dart';
 import '../models/user_model.dart';
 import '../utils/storage_helper.dart';
+import 'persistent_storage_service.dart';
 import 'api_service.dart';
+import 'storage_service.dart';
 
 class AuthServiceApi extends ChangeNotifier {
-  final ApiService _apiService = ApiService();
-  final LocalAuthentication _localAuth = LocalAuthentication();
+  final ApiService _apiService;
+  final LocalAuthentication _localAuth;
+  final IStorageService _storage;
+  
+  AuthServiceApi({ApiService? apiService, LocalAuthentication? localAuth, IStorageService? storage})
+      : _apiService = apiService ?? ApiService(),
+        _localAuth = localAuth ?? LocalAuthentication(),
+        _storage = storage ?? PersistentStorageService();
   
   // Current user data
   Map<String, dynamic>? _currentUser;
@@ -46,14 +54,14 @@ class AuthServiceApi extends ChangeNotifier {
           user['school_name'] = user['school']['name'];
         }
         
-        await StorageHelper.saveUser(user);
+        await _storage.saveUser(user);
         
         // Save school ID if available
         if (user['school_id'] != null) {
           final schoolId = user['school_id'] is int 
               ? user['school_id'] as int 
               : int.tryParse(user['school_id'].toString()) ?? 0;
-          await StorageHelper.saveSchoolId(schoolId);
+          await _storage.saveSchoolId(schoolId);
         }
         
         _currentUser = user;
@@ -109,10 +117,10 @@ class AuthServiceApi extends ChangeNotifier {
       await _apiService.post(ApiConfig.logout);
     } catch (e) {
       // Continue with logout even if API call fails
-      print('Logout API error: $e');
+      debugPrint('Logout API error: $e');
     } finally {
       await _apiService.clearToken();
-      await StorageHelper.clearAll();
+      await _storage.clearAll();
       _currentUser = null;
     }
   }
@@ -127,18 +135,18 @@ class AuthServiceApi extends ChangeNotifier {
     }
     
     // Try to get from storage
-    _currentUser = await StorageHelper.getUser();
+    _currentUser = await _storage.getUser();
     
     // If still null, try to fetch from API
-    if (_currentUser == null && await StorageHelper.isLoggedIn()) {
+    if (_currentUser == null && await _storage.isLoggedIn()) {
       try {
         final response = await _apiService.get(ApiConfig.me);
         if (response['success'] == true) {
           _currentUser = Map<String, dynamic>.from(response['data']['user']);
-          await StorageHelper.saveUser(_currentUser!);
+          await _storage.saveUser(_currentUser!);
         }
       } catch (e) {
-        print('Error fetching current user: $e');
+        debugPrint('Error fetching current user: $e');
       }
     }
     
@@ -147,7 +155,7 @@ class AuthServiceApi extends ChangeNotifier {
   
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
-    return await StorageHelper.isLoggedIn();
+    return await _storage.isLoggedIn();
   }
   
   // Get user role
@@ -158,7 +166,7 @@ class AuthServiceApi extends ChangeNotifier {
   
   // Get school ID
   Future<int?> getSchoolId() async {
-    final schoolId = await StorageHelper.getSchoolId();
+    final schoolId = await _storage.getSchoolId();
     if (schoolId != null) return schoolId;
     
     final user = await getCurrentUser();
@@ -166,7 +174,7 @@ class AuthServiceApi extends ChangeNotifier {
       final id = user['school_id'] is int 
           ? user['school_id'] as int 
           : int.tryParse(user['school_id'].toString()) ?? 0;
-      await StorageHelper.saveSchoolId(id);
+      await _storage.saveSchoolId(id);
       return id;
     }
     
@@ -260,7 +268,7 @@ class AuthServiceApi extends ChangeNotifier {
       
       if (response['success'] == true) {
         final user = Map<String, dynamic>.from(response['data']);
-        await StorageHelper.saveUser(user);
+        await _storage.saveUser(user);
         _currentUser = user;
         notifyListeners();
       } else {
@@ -316,11 +324,11 @@ class AuthServiceApi extends ChangeNotifier {
           await _apiService.setToken(token);
         }
         
-        await StorageHelper.saveUser(user);
+        await _storage.saveUser(user);
         final schoolId = school['id'] is int 
             ? school['id'] as int 
             : int.tryParse(school['id'].toString()) ?? 0;
-        await StorageHelper.saveSchoolId(schoolId);
+        await _storage.saveSchoolId(schoolId);
         
         _currentUser = user;
         notifyListeners();
@@ -340,7 +348,7 @@ class AuthServiceApi extends ChangeNotifier {
       final response = await _apiService.get(ApiConfig.me);
       if (response['success'] == true) {
         _currentUser = Map<String, dynamic>.from(response['data']['user']);
-        await StorageHelper.saveUser(_currentUser!);
+        await _storage.saveUser(_currentUser!);
         notifyListeners();
         return _currentUser;
       }
@@ -352,10 +360,10 @@ class AuthServiceApi extends ChangeNotifier {
 
   // --- Biometric Authentication ---
 
-  Future<bool> get isBiometricEnabled => StorageHelper.isBiometricEnabled();
+  Future<bool> get isBiometricEnabled => _storage.isBiometricEnabled();
 
   Future<void> setBiometricEnabled(bool enabled) async {
-    await StorageHelper.setBiometricEnabled(enabled);
+    await _storage.setBiometricEnabled(enabled);
     notifyListeners();
   }
 
@@ -393,7 +401,7 @@ class AuthServiceApi extends ChangeNotifier {
     final success = await authenticateBiometric();
     if (success) {
       // If biometric success, verify we have a valid token
-      final token = await StorageHelper.getToken();
+      final token = await _storage.getToken();
       if (token != null) {
         await _apiService.setToken(token);
         await getCurrentUser(); // Refresh user data
